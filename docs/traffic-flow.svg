@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1220 860" width="1220" height="860" role="img" aria-label="Network traffic flow from kubectl through Boundary workers into the VPC">
+<rect x="0" y="0" width="1220" height="860" rx="0" fill="#fcfcfb" stroke="#fcfcfb" stroke-width="1"/>
+<text x="40" y="36" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="19" fill="#1c1b19" font-weight="bold" text-anchor="start">Traffic flow</text>
+<text x="40" y="56" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#6f6b64" font-weight="normal" text-anchor="start">Which host talks to which, on what port, and — critically — which side opens the connection</text>
+<rect x="40" y="92" width="215" height="210" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="58" y="116" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">YOUR LAPTOP</text>
+<text x="58" y="144" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">kubectl</text>
+<text x="58" y="162" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">127.0.0.1:8443</text>
+<text x="58" y="190" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">boundary CLI</text>
+<text x="58" y="208" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">holds the local listener</text>
+<text x="58" y="240" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">no VPN, no route</text>
+<text x="58" y="257" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">into 10.0.0.0/16</text>
+<rect x="300" y="92" width="240" height="210" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="318" y="116" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">HCP BOUNDARY (SaaS)</text>
+<text x="318" y="146" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">controller</text>
+<text x="318" y="164" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">authz, targets, roles</text>
+<text x="318" y="192" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">managed workers</text>
+<text x="318" y="210" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">hcp-managed-worker-0/1</text>
+<text x="318" y="240" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">never dials into</text>
+<text x="318" y="257" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">your VPC</text>
+<rect x="590" y="92" width="590" height="660" rx="14" fill="#f6f5f1" stroke="#cbc6bc" stroke-width="1"/>
+<text x="612" y="116" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1">AWS VPC · vpc-0642cd1b6fe3748ef · 10.0.0.0/16</text>
+<rect x="612" y="130" width="546" height="96" rx="10" fill="#fbfaf7" stroke="#ddd8cf" stroke-width="1"/>
+<text x="628" y="150" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1">PUBLIC SUBNETS · 10.0.101-103.0/24</text>
+<rect x="636" y="158" width="250" height="56" rx="8" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="650" y="180" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">NAT gateway</text>
+<text x="650" y="198" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">52.74.206.92</text>
+<text x="906" y="180" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">the only public IP</text>
+<text x="906" y="198" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">in the whole path</text>
+<rect x="612" y="244" width="546" height="490" rx="10" fill="#fbfaf7" stroke="#ddd8cf" stroke-width="1"/>
+<text x="628" y="264" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1">PRIVATE SUBNETS · 10.0.1-3.0/24 · no inbound from internet</text>
+<rect x="636" y="280" width="250" height="88" rx="8" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="650" y="304" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">Boundary worker</text>
+<text x="650" y="322" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">10.0.1.127</text>
+<text x="650" y="340" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">EC2 · no public IP</text>
+<text x="650" y="358" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">SG: egress all, in 9202/VPC</text>
+<rect x="908" y="280" width="238" height="88" rx="8" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="922" y="304" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">EKS API ENIs</text>
+<text x="922" y="322" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">10.0.1.142:443</text>
+<text x="922" y="340" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">10.0.3.136:443</text>
+<text x="922" y="358" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">private endpoint only</text>
+<rect x="636" y="420" width="250" height="88" rx="8" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="650" y="444" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">internal NLB</text>
+<text x="650" y="462" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">10.0.1.41 / .2.172 / .3.133</text>
+<text x="650" y="480" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">scheme: internal :8200</text>
+<rect x="908" y="420" width="238" height="88" rx="8" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="922" y="444" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">EKS node</text>
+<text x="922" y="462" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">10.0.2.169</text>
+<text x="922" y="480" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">NodePort 32591</text>
+<rect x="908" y="548" width="238" height="72" rx="8" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="922" y="572" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">vault-0 pod</text>
+<text x="922" y="590" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">10.0.2.119:8200</text>
+<text x="922" y="608" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">VPC-CNI: a real VPC IP</text>
+<line x1="255" y1="150" x2="294" y2="150" stroke="#8b867d" stroke-width="1.6" stroke-linecap="round"/>
+<polygon points="294,150 288,146.28 288,153.72" fill="#8b867d"/>
+<circle cx="275" cy="128" r="10.5" fill="#b0522c"/>
+<text x="275" y="131.7" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#ffffff" font-weight="bold" text-anchor="middle">1</text>
+<text x="200" y="180" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="middle">TLS 443 outbound</text>
+<polyline points="700,280 700,232 700,214" fill="none" stroke="#3a6ea8" stroke-width="1.6" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="700,214 696.28,220 703.72,220" fill="#3a6ea8"/>
+<circle cx="742" cy="250" r="10.5" fill="#3a6ea8"/>
+<text x="742" y="253.7" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#ffffff" font-weight="bold" text-anchor="middle">2</text>
+<polyline points="636,186 560,186" fill="none" stroke="#3a6ea8" stroke-width="1.6" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="560,186 566,182.28 566,189.72" fill="#3a6ea8"/>
+<text x="548" y="168" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#3a6ea8" font-weight="normal" text-anchor="end">to HCP</text>
+<polyline points="540,214 566,214 566,300 630,300" fill="none" stroke="#8b867d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="630,300 624,296.28 624,303.72" fill="#8b867d"/>
+<circle cx="590" cy="262" r="10.5" fill="#b0522c"/>
+<text x="590" y="265.7" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#ffffff" font-weight="bold" text-anchor="middle">3</text>
+<line x1="886" y1="318" x2="902" y2="318" stroke="#8b867d" stroke-width="1.6" stroke-linecap="round"/>
+<polygon points="902,318 896,314.28 896,321.72" fill="#8b867d"/>
+<circle cx="896" cy="296" r="10.5" fill="#b0522c"/>
+<text x="896" y="299.7" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#ffffff" font-weight="bold" text-anchor="middle">4</text>
+<text x="1000" y="394" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="middle">TCP 443 · TLS terminates at EKS</text>
+<polyline points="760,368 760,420" fill="none" stroke="#3f7a55" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="760,420 756.28,414 763.72,414" fill="#3f7a55"/>
+<circle cx="790" cy="394" r="10.5" fill="#3f7a55"/>
+<text x="790" y="397.7" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#ffffff" font-weight="bold" text-anchor="middle">5</text>
+<text x="646" y="404" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#3f7a55" font-weight="normal" text-anchor="start">8200 credential fetch</text>
+<polyline points="886,464 902,464" fill="none" stroke="#3f7a55" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="902,464 896,460.28 896,467.72" fill="#3f7a55"/>
+<polyline points="1027,508 1027,548" fill="none" stroke="#3f7a55" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1027,548 1023.28,542 1030.72,542" fill="#3f7a55"/>
+<text x="1040" y="534" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#3f7a55" font-weight="normal" text-anchor="start">→ pod</text>
+<rect x="40" y="560" width="500" height="120" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="58" y="586" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">READING THE ARROWS</text>
+<line x1="58" y1="608" x2="98" y2="608" stroke="#8b867d" stroke-width="1.6"/>
+<polygon points="98,608 92,604.28 92,611.72" fill="#8b867d"/>
+<text x="110" y="612" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">a new connection is opened in this direction</text>
+<line x1="58" y1="634" x2="98" y2="634" stroke="#3a6ea8" stroke-width="1.6" stroke-dasharray="5 4"/>
+<polygon points="98,634 92,630.28 92,637.72" fill="#8b867d"/>
+<text x="110" y="638" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#3a6ea8" font-weight="normal" text-anchor="start">outbound tunnel setup — the worker initiates, always</text>
+<line x1="58" y1="660" x2="98" y2="660" stroke="#3f7a55" stroke-width="1.6"/>
+<polygon points="98,660 92,656.28 92,663.72" fill="#8b867d"/>
+<text x="110" y="664" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#3f7a55" font-weight="normal" text-anchor="start">credential brokering, entirely inside the VPC</text>
+<text x="40" y="784" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">Nothing in this diagram accepts an inbound connection from the internet.</text>
+<text x="40" y="804" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#6f6b64" font-weight="normal" text-anchor="start">The worker has no public IP and no inbound rule; it reaches HCP through NAT and holds that tunnel open. HCP pushes session bytes back down it.</text>
+<text x="40" y="824" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#6f6b64" font-weight="normal" text-anchor="start">That is what makes a private EKS endpoint reachable without a VPN, a bastion, or opening the API server to the world.</text>
+<text x="300" y="348" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#3a6ea8" font-weight="bold" text-anchor="start">2 · worker dials OUT :9202 through NAT</text>
+<text x="300" y="364" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" text-anchor="start">and holds that tunnel open</text>
+<text x="300" y="392" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#1c1b19" font-weight="bold" text-anchor="start">3 · session bytes ride that tunnel</text>
+<text x="300" y="408" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" text-anchor="start">HCP never opens an inbound connection</text>
+</svg>

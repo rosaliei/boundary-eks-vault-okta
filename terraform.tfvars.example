@@ -1,0 +1,96 @@
+# =============================================================================
+# Example terraform.tfvars
+# Copy this file to terraform.tfvars and fill in your values
+# NEVER commit terraform.tfvars to version control
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# TERRAFORM MODULE: terraform/
+# AWS Infrastructure (VPC + EKS)
+# -----------------------------------------------------------------------------
+
+# AWS Region
+aws_region = "ap-southeast-1"
+
+# Project naming
+project_name = "hc-eks-vault-boundary"
+environment  = "dev"
+
+# VPC Configuration
+vpc_cidr             = "10.0.0.0/16"
+availability_zones   = ["ap-southeast-1a", "ap-southeast-1b", "ap-southeast-1c"]
+private_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+public_subnet_cidrs  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+
+# EKS Configuration
+cluster_name        = "hc-eks-cluster"
+cluster_version     = "1.29"
+node_instance_types = ["t3.medium"]
+node_desired_size   = 2
+node_min_size       = 1
+node_max_size       = 4
+node_capacity_type  = "SPOT"  # Use "ON_DEMAND" for production
+
+# Optional: Additional admin access (uncomment and fill in if needed)
+# admin_iam_role_arn = "arn:aws:iam::123456789012:role/AdminRole"
+# admin_iam_user_arn = "arn:aws:iam::123456789012:user/admin"
+
+# -----------------------------------------------------------------------------
+# TERRAFORM MODULE: vault/
+# Vault Kubernetes Secrets Engine
+# -----------------------------------------------------------------------------
+
+# These values come from EKS terraform outputs
+# kubernetes_host    = "https://XXXXX.gr7.ap-southeast-1.eks.amazonaws.com"
+# kubernetes_ca_cert = "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
+
+# Service account token for Vault (generate with kubectl create token)
+# vault_sa_jwt_token = "eyJhbGciOiJSUz..."
+
+# Namespace for the ServiceAccounts
+kubernetes_namespace = "demo-app"
+
+# Credential TTL settings (in seconds)
+default_ttl_seconds = 900   # 15 minutes
+max_ttl_seconds     = 3600  # 1 hour
+
+# -----------------------------------------------------------------------------
+# TERRAFORM MODULE: boundary/
+# Boundary OIDC + Targets
+# -----------------------------------------------------------------------------
+
+# Boundary cluster
+boundary_addr = "https://30bf44c61-5e709ad9254d.boundary.hashicorp.cloud"
+
+# Boundary admin credentials (for Terraform provider auth)
+# boundary_auth_method_id         = "ampw_XXXXXXXXXX"
+# boundary_auth_method_login_name = "admin"
+# boundary_auth_method_password   = "your-password-here"
+
+# Organization scope ID
+# org_scope_id = "o_XXXXXXXXXX"
+
+# Project settings
+project_name        = "eks-access"
+project_description = "EKS cluster access via Boundary and Vault dynamic credentials"
+
+# Okta OIDC Configuration
+# okta_issuer        = "https://your-domain.okta.com/oauth2/default"
+# okta_client_id     = "0oaXXXXXXXXXXXXXX"
+# okta_client_secret = "your-client-secret-here"
+
+# EKS target (from terraform output)
+# eks_api_endpoint = "https://XXXXX.gr7.ap-southeast-1.eks.amazonaws.com"
+
+# Worker filter for routing through VPC worker
+boundary_worker_filter = "\"eks-vpc-worker\" in \"/name\""
+
+# Okta group names (must match your Okta configuration)
+okta_viewer_group   = "eks-viewers"
+okta_operator_group = "eks-operators"
+okta_admin_group    = "eks-admins"
+
+# --- EKS public endpoint (bootstrap/testing only) ---
+# Your current public IP; update if your ISP rotates it.
+# Once Boundary + Vault are wired, set cluster_endpoint_public_access = false in eks.tf.
+admin_public_cidrs = ["92.98.212.193/32"]

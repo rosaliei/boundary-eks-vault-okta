@@ -1,0 +1,32 @@
+# -----------------------------------------------------------------------------
+# Terraform
+# -----------------------------------------------------------------------------
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.lock.info
+*.tfplan
+crash.log
+
+# State holds real secrets in cleartext - boundary/terraform.tfstate contains the
+# Vault broker token, terraform/terraform.tfstate the cluster CA. Never commit.
+
+# -----------------------------------------------------------------------------
+# Secrets and local variable files
+# -----------------------------------------------------------------------------
+*.tfvars
+!*.tfvars.example
+vault-sa-token.txt
+*.pem
+*.key
+kubeconfig*
+eks-ca.crt
+
+# -----------------------------------------------------------------------------
+# Local runs / OS
+# -----------------------------------------------------------------------------
+claude-run.log
+.DS_Store
+ca.crt

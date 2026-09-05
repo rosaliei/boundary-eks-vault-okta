@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 880" width="1180" height="880" role="img" aria-label="Who authenticates to whom in the Okta Boundary Vault EKS chain">
+<rect x="0" y="0" width="1180" height="880" rx="0" fill="#fcfcfb" stroke="#fcfcfb" stroke-width="1"/>
+<text x="40" y="36" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="19" fill="#1c1b19" font-weight="bold" text-anchor="start">Who authenticates to whom</text>
+<text x="40" y="56" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#6f6b64" font-weight="normal" text-anchor="start">Eight independent authentications, no shared credential between them — and one relationship that is deliberately none.</text>
+<rect x="40" y="80" width="1100" height="205" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="58" y="105" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">THE DATA PATH</text>
+<rect x="58" y="180" width="180" height="72" rx="10" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="74" y="205" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">kubectl</text>
+<text x="74" y="225" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">on your laptop</text>
+<rect x="320" y="180" width="190" height="72" rx="10" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="336" y="205" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">HCP Boundary</text>
+<text x="336" y="225" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">control plane</text>
+<rect x="600" y="180" width="190" height="72" rx="10" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="616" y="205" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">Boundary worker</text>
+<text x="616" y="225" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">EC2 in your VPC</text>
+<rect x="880" y="180" width="180" height="72" rx="10" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="896" y="205" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">EKS API</text>
+<text x="896" y="225" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">private endpoint</text>
+<line x1="238" y1="216" x2="314" y2="216" stroke="#8b867d" stroke-width="1.6" stroke-linecap="round"/>
+<polygon points="314,216 308,212.28 308,219.72" fill="#8b867d"/>
+<line x1="510" y1="216" x2="594" y2="216" stroke="#8b867d" stroke-width="1.6" stroke-linecap="round"/>
+<polygon points="594,216 588,212.28 588,219.72" fill="#8b867d"/>
+<line x1="790" y1="216" x2="874" y2="216" stroke="#8b867d" stroke-width="1.6" stroke-linecap="round"/>
+<polygon points="874,216 868,212.28 868,219.72" fill="#8b867d"/>
+<path d="M 148 172 L 148 150 L 970 150 L 970 172" fill="none" stroke="#3a6ea8" stroke-width="1.6"/>
+<text x="559" y="142" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#3a6ea8" font-weight="bold" text-anchor="middle">TLS 1.3 — end to end between kubectl and the EKS API</text>
+<text x="58" y="272" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">The worker forwards bytes. It never terminates TLS, holds no cluster credential, and cannot read this traffic — which is exactly why kubectl needs --tls-server-name and the EKS CA.</text>
+<text x="40" y="325" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">EVERY AUTHENTICATION IN THE CHAIN</text>
+<text x="40" y="352" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="0.8">WHO</text>
+<text x="250" y="352" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="0.8">AUTHENTICATES TO</text>
+<text x="470" y="352" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="0.8">WITH WHAT</text>
+<text x="810" y="352" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="0.8">BECOMES</text>
+<line x1="40" y1="364" x2="1140" y2="364" stroke="#d8d4cc" stroke-width="1"/>
+<text x="40" y="401" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">You</text>
+<text x="250" y="401" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">Okta</text>
+<text x="470" y="401" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">password + MFA</text>
+<text x="810" y="401" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">Okta user 00u16uv22cyMP5ljv698</text>
+<line x1="40" y1="416" x2="1140" y2="416" stroke="#eceae5" stroke-width="1"/>
+<text x="40" y="443" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">HCP Boundary</text>
+<text x="250" y="443" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">Okta</text>
+<text x="470" y="443" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">OIDC client_id + client_secret</text>
+<text x="810" y="443" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">confidential client 0oa174q3bo…</text>
+<line x1="40" y1="458" x2="1140" y2="458" stroke="#eceae5" stroke-width="1"/>
+<text x="40" y="485" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">You</text>
+<text x="250" y="485" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">HCP Boundary</text>
+<text x="470" y="485" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">the Okta ID token it just received</text>
+<text x="810" y="485" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">acctoidc_… → viewers → role viewer</text>
+<line x1="40" y1="500" x2="1140" y2="500" stroke="#eceae5" stroke-width="1"/>
+<text x="40" y="527" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">Boundary worker</text>
+<text x="250" y="527" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">HCP Boundary</text>
+<text x="470" y="527" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">PKI node credentials, auto-rotated</text>
+<text x="810" y="527" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">worker kst-eks-ap-southeast-1-worker-01</text>
+<line x1="40" y1="542" x2="1140" y2="542" stroke="#eceae5" stroke-width="1"/>
+<rect x="36" y="544" width="1108" height="40" rx="8" fill="#f4efe6" stroke="#f4efe6" stroke-width="1"/>
+<text x="40" y="569" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#b0522c" font-weight="bold" text-anchor="start">Boundary worker</text>
+<text x="250" y="569" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#b0522c" font-weight="normal" text-anchor="start">EKS API</text>
+<text x="470" y="569" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#b0522c" font-weight="normal" text-anchor="start">nothing — it is a raw TCP relay</text>
+<text x="810" y="569" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#b0522c" font-weight="normal" text-anchor="start">no identity at all</text>
+<line x1="40" y1="584" x2="1140" y2="584" stroke="#eceae5" stroke-width="1"/>
+<text x="40" y="611" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">Vault</text>
+<text x="250" y="611" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">EKS API</text>
+<text x="470" y="611" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">vault-auth SA JWT (long-lived)</text>
+<text x="810" y="611" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">system:serviceaccount:kube-system:vault-auth</text>
+<line x1="40" y1="626" x2="1140" y2="626" stroke="#eceae5" stroke-width="1"/>
+<text x="40" y="653" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">You (kubectl)</text>
+<text x="250" y="653" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">EKS API</text>
+<text x="470" y="653" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">Vault-issued SA token, 15 min</text>
+<text x="810" y="653" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">system:serviceaccount:demo-app:vault-viewer</text>
+<line x1="40" y1="668" x2="1140" y2="668" stroke="#eceae5" stroke-width="1"/>
+<text x="40" y="695" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">You (setup)</text>
+<text x="250" y="695" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">Vault</text>
+<text x="470" y="695" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">root token — dev mode only</text>
+<text x="810" y="695" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">Vault root</text>
+<line x1="40" y1="710" x2="1140" y2="710" stroke="#eceae5" stroke-width="1"/>
+<text x="40" y="737" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">You (admin)</text>
+<text x="250" y="737" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="normal" text-anchor="start">EKS API</text>
+<text x="470" y="737" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">IAM access entry, aws eks get-token</text>
+<text x="810" y="737" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">cluster admin — the setup path we bypass</text>
+<line x1="40" y1="752" x2="1140" y2="752" stroke="#eceae5" stroke-width="1"/>
+<text x="40" y="784" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">The worker is the one everybody assumes authenticates to the cluster. It does not.</text>
+<text x="40" y="804" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#6f6b64" font-weight="normal" text-anchor="start">It proves itself to Boundary, and Boundary decides whether to open a pipe. What travels through that pipe is opaque to it.</text>
+<text x="40" y="828" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#6f6b64" font-weight="normal" text-anchor="start">Vault authenticates to EKS on its own account, entirely separately, and its only power is to mint short-lived tokens for three named ServiceAccounts.</text>
+</svg>

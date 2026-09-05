@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 780" width="1180" height="780" role="img" aria-label="End to end access flow from Okta through Boundary and Vault to a private EKS API">
+<rect x="0" y="0" width="1180" height="780" rx="0" fill="#fcfcfb" stroke="#fcfcfb" stroke-width="1"/>
+<text x="40" y="36" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="19" fill="#1c1b19" font-weight="bold" text-anchor="start">End-to-end access flow</text>
+<text x="40" y="56" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#6f6b64" font-weight="normal" text-anchor="start">Okta authenticates the human · Boundary opens the path · Vault issues the identity · Kubernetes RBAC bounds it</text>
+<rect x="630" y="78" width="510" height="545" rx="14" fill="#f6f5f1" stroke="#cbc6bc" stroke-width="1"/>
+<text x="650" y="101" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">AWS VPC · 10.0.0.0/16</text>
+<rect x="40" y="98" width="230" height="375" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="58" y="121" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">YOUR LAPTOP</text>
+<rect x="340" y="78" width="230" height="100" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<rect x="340" y="228" width="230" height="140" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="58" y="150" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">boundary CLI</text>
+<text x="58" y="168" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">boundary connect</text>
+<text x="58" y="198" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">local proxy</text>
+<text x="58" y="216" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">127.0.0.1:8443</text>
+<text x="58" y="246" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">kubectl</text>
+<text x="58" y="264" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">--tls-server-name=…</text>
+<text x="58" y="282" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">--token=&lt;SA token&gt;</text>
+<line x1="58" y1="302" x2="252" y2="302" stroke="#d8d4cc" stroke-width="1"/>
+<text x="58" y="326" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#6f6b64" font-weight="normal" text-anchor="start">no kubeconfig</text>
+<text x="58" y="344" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#6f6b64" font-weight="normal" text-anchor="start">no IAM rights used</text>
+<text x="58" y="362" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#6f6b64" font-weight="normal" text-anchor="start">no cluster credentials at rest</text>
+<text x="360" y="106" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#1c1b19" font-weight="bold" text-anchor="start">Okta</text>
+<text x="360" y="126" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">trial-9050012.okta.com</text>
+<text x="360" y="148" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#6f6b64" font-weight="normal" text-anchor="start">ID token claim</text>
+<text x="360" y="165" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#1c1b19" font-weight="normal" text-anchor="start">groups: ["eks-viewers"]</text>
+<text x="360" y="256" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#1c1b19" font-weight="bold" text-anchor="start">HCP Boundary</text>
+<text x="360" y="278" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#1c1b19" font-weight="normal" text-anchor="start">managed group viewers</text>
+<text x="372" y="296" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">↓ role viewer</text>
+<text x="372" y="314" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">↓ authorize-session</text>
+<text x="360" y="338" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#1c1b19" font-weight="normal" text-anchor="start">target eks-api tcp/443</text>
+<text x="360" y="355" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">egress "/name" == worker</text>
+<rect x="658" y="148" width="212" height="92" rx="10" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="674" y="172" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">Boundary worker</text>
+<text x="674" y="192" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">EC2 · private subnet</text>
+<text x="674" y="209" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">10.0.1.127</text>
+<text x="674" y="227" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">no public IP · no SSH</text>
+<rect x="900" y="148" width="212" height="92" rx="10" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="916" y="172" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">EKS API</text>
+<text x="916" y="192" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">private endpoint</text>
+<text x="916" y="209" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">10.0.1.142 :443</text>
+<text x="916" y="227" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">10.0.3.136 :443</text>
+<rect x="658" y="338" width="212" height="92" rx="10" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="674" y="362" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">Vault</text>
+<text x="674" y="382" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">kubernetes secrets engine</text>
+<text x="674" y="399" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">viewer → vault-viewer</text>
+<text x="674" y="417" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#1c1b19" font-weight="normal" text-anchor="start">TTL 15 min</text>
+<rect x="900" y="338" width="212" height="92" rx="10" fill="#ffffff" stroke="#c6c1b8" stroke-width="1"/>
+<text x="916" y="362" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">Kubernetes RBAC</text>
+<text x="916" y="382" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">namespace demo-app</text>
+<text x="916" y="399" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">viewer-binding → Role</text>
+<text x="916" y="417" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">get / list / watch only</text>
+<line x1="270" y1="138" x2="334" y2="138" stroke="#8b867d" stroke-width="1.6" stroke-linecap="round"/>
+<polygon points="334,138 328,134.28 328,141.72" fill="#8b867d"/>
+<circle cx="302" cy="118" r="10.5" fill="#b0522c"/>
+<text x="302" y="121.7" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#ffffff" font-weight="bold" text-anchor="middle">1</text>
+<text x="302" y="166" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="middle">browser login</text>
+<line x1="455" y1="178" x2="455" y2="222" stroke="#8b867d" stroke-width="1.6" stroke-linecap="round"/>
+<polygon points="455,222 451.28,216 458.72,216" fill="#8b867d"/>
+<circle cx="478" cy="200" r="10.5" fill="#b0522c"/>
+<text x="478" y="203.7" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#ffffff" font-weight="bold" text-anchor="middle">2</text>
+<text x="494" y="204" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">ID token</text>
+<line x1="270" y1="288" x2="334" y2="288" stroke="#8b867d" stroke-width="1.6" stroke-linecap="round"/>
+<polygon points="334,288 328,284.28 328,291.72" fill="#8b867d"/>
+<circle cx="302" cy="268" r="10.5" fill="#b0522c"/>
+<text x="302" y="271.7" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#ffffff" font-weight="bold" text-anchor="middle">3</text>
+<text x="302" y="314" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="middle">connect</text>
+<line x1="570" y1="258" x2="652" y2="258" stroke="#8b867d" stroke-width="1.6" stroke-linecap="round"/>
+<polygon points="652,258 646,254.28 646,261.72" fill="#8b867d"/>
+<circle cx="611" cy="238" r="10.5" fill="#b0522c"/>
+<text x="611" y="241.7" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#ffffff" font-weight="bold" text-anchor="middle">4</text>
+<text x="611" y="282" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="middle">session</text>
+<line x1="658" y1="318" x2="576" y2="318" stroke="#3a6ea8" stroke-width="1.6" stroke-dasharray="5 4" stroke-linecap="round"/>
+<polygon points="576,318 582,314.28 582,321.72" fill="#3a6ea8"/>
+<text x="630" y="340" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#3a6ea8" font-weight="normal" text-anchor="middle">worker dials out</text>
+<text x="630" y="354" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#3a6ea8" font-weight="normal" text-anchor="middle">reverse tunnel :9202</text>
+<line x1="870" y1="194" x2="894" y2="194" stroke="#8b867d" stroke-width="1.6" stroke-linecap="round"/>
+<polygon points="894,194 888,190.28 888,197.72" fill="#8b867d"/>
+<circle cx="884" cy="166" r="10.5" fill="#b0522c"/>
+<text x="884" y="169.7" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#ffffff" font-weight="bold" text-anchor="middle">5</text>
+<polyline points="764,338 764,290 950,290 950,246" fill="none" stroke="#8b867d" stroke-width="1.6" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="950,246 946.28,252 953.72,252" fill="#8b867d"/>
+<text x="778" y="282" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">TokenRequest · mints SA token</text>
+<line x1="270" y1="400" x2="652" y2="400" stroke="#8b867d" stroke-width="1.6" stroke-linecap="round"/>
+<polygon points="658,400 652,396.28 652,403.72" fill="#8b867d"/>
+<polygon points="264,400 270,396.28 270,403.72" fill="#8b867d"/>
+<circle cx="320" cy="400" r="10.5" fill="#b0522c"/>
+<text x="320" y="403.7" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#ffffff" font-weight="bold" text-anchor="middle">6</text>
+<text x="342" y="382" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">vault write kubernetes/creds/viewer</text>
+<text x="342" y="419" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">→ 15-minute ServiceAccount token</text>
+<line x1="1050" y1="246" x2="1050" y2="332" stroke="#8b867d" stroke-width="1.6" stroke-linecap="round"/>
+<polygon points="1050,332 1046.28,326 1053.72,326" fill="#8b867d"/>
+<circle cx="1050" cy="289" r="10.5" fill="#b0522c"/>
+<text x="1050" y="292.7" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#ffffff" font-weight="bold" text-anchor="middle">7</text>
+<text x="1068" y="293" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">allow / deny</text>
+<rect x="40" y="520" width="530" height="120" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="58" y="546" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">TWO DIFFERENT TOKENS</text>
+<text x="58" y="571" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">Okta ID token</text>
+<text x="186" y="571" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">iss: trial-9050012.okta.com</text>
+<text x="58" y="587" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">proves the human to Boundary</text>
+<text x="58" y="609" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">ServiceAccount token</text>
+<text x="222" y="609" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">iss: oidc.eks.…amazonaws.com</text>
+<text x="58" y="625" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">proves the workload identity to Kubernetes · expires in 15 min</text>
+<text x="40" y="672" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#1c1b19" font-weight="normal" text-anchor="start">Boundary decides whether you may reach the API port.  Kubernetes RBAC decides what you may do once there.</text>
+<text x="40" y="692" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#6f6b64" font-weight="normal" text-anchor="start">A Boundary admin holding a viewer ServiceAccount token still cannot write to the cluster.</text>
+</svg>

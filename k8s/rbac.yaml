@@ -1,0 +1,294 @@
+# -----------------------------------------------------------------------------
+# Kubernetes RBAC Configuration for Vault Dynamic Credentials
+#
+# This file creates three tiers of access for the demo application namespace:
+# - viewer:   Read-only access to common resources
+# - operator: Viewer + ability to manage deployments, services, configmaps
+# - admin:    Full access to all resources in the namespace
+#
+# Each tier has:
+# - Namespace (shared)
+# - ServiceAccount (one per role)
+# - Role (defines permissions)
+# - RoleBinding (connects ServiceAccount to Role)
+#
+# Vault's Kubernetes secrets engine will generate short-lived tokens for
+# these ServiceAccounts, providing dynamic, time-limited credentials.
+# -----------------------------------------------------------------------------
+
+---
+# =============================================================================
+# NAMESPACE
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo-app
+  labels:
+    app.kubernetes.io/managed-by: "terraform-vault"
+    purpose: "demo-application"
+
+---
+# =============================================================================
+# VIEWER ROLE
+# Minimum access: read-only to common Kubernetes resources
+# Use case: Developers checking application status, logs, debugging
+# =============================================================================
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-viewer
+  namespace: demo-app
+  labels:
+    app.kubernetes.io/component: "rbac"
+    rbac.vault.io/role: "viewer"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: viewer
+  namespace: demo-app
+  labels:
+    app.kubernetes.io/component: "rbac"
+    rbac.vault.io/role: "viewer"
+rules:
+  # Read-only access to core resources
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/log
+      - services
+      - endpoints
+      - configmaps
+      - secrets       # Read-only secrets (consider restricting in production)
+      - events
+    verbs: ["get", "list", "watch"]
+
+  # Read-only access to workload resources
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+      - replicasets
+      - statefulsets
+      - daemonsets
+    verbs: ["get", "list", "watch"]
+
+  # Read-only access to networking resources
+  - apiGroups: ["networking.k8s.io"]
+    resources:
+      - ingresses
+      - networkpolicies
+    verbs: ["get", "list", "watch"]
+
+  # Read-only access to autoscaling
+  - apiGroups: ["autoscaling"]
+    resources:
+      - horizontalpodautoscalers
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: viewer-binding
+  namespace: demo-app
+  labels:
+    app.kubernetes.io/component: "rbac"
+    rbac.vault.io/role: "viewer"
+subjects:
+  - kind: ServiceAccount
+    name: vault-viewer
+    namespace: demo-app
+roleRef:
+  kind: Role
+  name: viewer
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# =============================================================================
+# OPERATOR ROLE
+# Standard access: can manage deployments, services, and configuration
+# Use case: DevOps engineers deploying and managing applications
+# =============================================================================
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-operator
+  namespace: demo-app
+  labels:
+    app.kubernetes.io/component: "rbac"
+    rbac.vault.io/role: "operator"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: operator
+  namespace: demo-app
+  labels:
+    app.kubernetes.io/component: "rbac"
+    rbac.vault.io/role: "operator"
+rules:
+  # Full access to pods (including exec for debugging)
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/log
+      - pods/exec
+      - pods/portforward
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Manage services and endpoints
+  - apiGroups: [""]
+    resources:
+      - services
+      - endpoints
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Manage configmaps (application configuration)
+  - apiGroups: [""]
+    resources:
+      - configmaps
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Read-only secrets (operators shouldn't create secrets directly)
+  - apiGroups: [""]
+    resources:
+      - secrets
+    verbs: ["get", "list", "watch"]
+
+  # View events
+  - apiGroups: [""]
+    resources:
+      - events
+    verbs: ["get", "list", "watch"]
+
+  # Full access to deployments, replicasets
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+      - deployments/scale
+      - replicasets
+      - replicasets/scale
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Read-only for statefulsets, daemonsets (require admin for changes)
+  - apiGroups: ["apps"]
+    resources:
+      - statefulsets
+      - daemonsets
+    verbs: ["get", "list", "watch"]
+
+  # Manage ingresses
+  - apiGroups: ["networking.k8s.io"]
+    resources:
+      - ingresses
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Read-only network policies
+  - apiGroups: ["networking.k8s.io"]
+    resources:
+      - networkpolicies
+    verbs: ["get", "list", "watch"]
+
+  # Manage HPA
+  - apiGroups: ["autoscaling"]
+    resources:
+      - horizontalpodautoscalers
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: operator-binding
+  namespace: demo-app
+  labels:
+    app.kubernetes.io/component: "rbac"
+    rbac.vault.io/role: "operator"
+subjects:
+  - kind: ServiceAccount
+    name: vault-operator
+    namespace: demo-app
+roleRef:
+  kind: Role
+  name: operator
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# =============================================================================
+# ADMIN ROLE
+# Full access: complete control over namespace resources
+# Use case: Platform engineers, namespace owners, emergency access
+# =============================================================================
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-admin
+  namespace: demo-app
+  labels:
+    app.kubernetes.io/component: "rbac"
+    rbac.vault.io/role: "admin"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: admin
+  namespace: demo-app
+  labels:
+    app.kubernetes.io/component: "rbac"
+    rbac.vault.io/role: "admin"
+rules:
+  # Full access to all core API resources
+  - apiGroups: [""]
+    resources: ["*"]
+    verbs: ["*"]
+
+  # Full access to apps API group
+  - apiGroups: ["apps"]
+    resources: ["*"]
+    verbs: ["*"]
+
+  # Full access to batch (jobs, cronjobs)
+  - apiGroups: ["batch"]
+    resources: ["*"]
+    verbs: ["*"]
+
+  # Full access to networking
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["*"]
+    verbs: ["*"]
+
+  # Full access to autoscaling
+  - apiGroups: ["autoscaling"]
+    resources: ["*"]
+    verbs: ["*"]
+
+  # Full access to policy (PodDisruptionBudgets)
+  - apiGroups: ["policy"]
+    resources: ["*"]
+    verbs: ["*"]
+
+  # RBAC management within namespace
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources:
+      - roles
+      - rolebindings
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: admin-binding
+  namespace: demo-app
+  labels:
+    app.kubernetes.io/component: "rbac"
+    rbac.vault.io/role: "admin"
+subjects:
+  - kind: ServiceAccount
+    name: vault-admin
+    namespace: demo-app
+roleRef:
+  kind: Role
+  name: admin
+  apiGroup: rbac.authorization.k8s.io
