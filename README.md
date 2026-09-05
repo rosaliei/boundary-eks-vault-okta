@@ -51,7 +51,6 @@ write to the cluster.
                           │
                        k8s RBAC (Role + RoleBinding) bounds it
 ```
-```
 
 </details>
 
@@ -87,6 +86,19 @@ without a VPN, a bastion, or exposing the API server.
 TLS is end to end between kubectl and the EKS API — every hop in between relays
 ciphertext it cannot read. Hence `--tls-server-name` and the cluster CA on the
 kubectl command: you dial `127.0.0.1`, but you validate the EKS certificate.
+
+### Editable diagrams
+
+The three SVGs above are generated and committed as-is. Excalidraw sources are
+in `docs/` if you want to redraw or extend them — open at
+[excalidraw.com](https://excalidraw.com) via *File → Open*:
+
+| File | What it shows |
+|---|---|
+| [docs/architecture.excalidraw](docs/architecture.excalidraw) | the whole system, with the numbered runtime flow |
+| [docs/setup-steps.excalidraw](docs/setup-steps.excalidraw) | all 8 build steps, each with the trap that bites in it |
+| [docs/boundary-okta-identity.excalidraw](docs/boundary-okta-identity.excalidraw) | original identity-flow sketch |
+| [docs/eks-detailed-analysis.excalidraw](docs/eks-detailed-analysis.excalidraw) | original EKS analysis sketch |
 
 ## Reference values
 
