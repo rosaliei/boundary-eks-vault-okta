@@ -1,0 +1,24 @@
+$ helm repo add hashicorp && helm repo update
+"hashicorp" already exists with the same configuration, skipping
+...Successfully got an update from the "hashicorp" chart repository
+Update Complete. ⎈Happy Helming!⎈
+
+$ helm install vault (dev mode)
+NAME: vault
+LAST DEPLOYED: Thu Sep 10 14:18:09 2026
+NAMESPACE: vault
+STATUS: deployed
+REVISION: 1
+NOTES:
+Thank you for installing HashiCorp Vault!
+
+Now that you have deployed Vault, you should look over the docs on using
+Vault with Kubernetes available here:
+
+https://developer.hashicorp.com/vault/docs
+
+
+Your release is named vault. To learn more about the release, try:
+
+  $ helm status vault
+  $ helm get manifest vault

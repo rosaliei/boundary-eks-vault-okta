@@ -1,0 +1,21 @@
+$ terraform output
+boundary_worker_instance_id = "i-064d367675f10c76d"
+boundary_worker_private_ip = "10.0.1.31"
+aws ssm start-session --target i-064d367675f10c76d --region ap-southeast-1 --profile pegb
+
+sudo /usr/local/bin/worker-auth-token
+
+export BOUNDARY_ADDR=https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud
+boundary workers create worker-led \
+  -name=kst-eks-ap-southeast-1-worker-01 \
+  -description="Self-managed worker with line of sight to the private EKS endpoint" \
+  -worker-generated-auth-token=<TOKEN>
+
+boundary workers list -format=json | jq '.items[] | {name, active_connection_count, release_version}'
+
+EOT
+boundary_worker_security_group_recommendation = "Create a security group allowing egress to https://6F66E12DC9593ADDD5CA21204650E2DA.gr7.ap-southeast-1.eks.amazonaws.com on port 443"
+boundary_worker_subnet_id = "subnet-0c698efb9bce87faf"
+cluster_certificate_authority_data = <sensitive>
+cluster_endpoint = "https://6F66E12DC9593ADDD5CA21204650E2DA.gr7.ap-southeast-1.eks.amazonaws.com"
+cluster_name = "hc-eks-cluster"

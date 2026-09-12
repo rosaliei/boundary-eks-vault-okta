@@ -137,3 +137,15 @@ variable "boundary_worker_instance_type" {
   type        = string
   default     = "t3.micro"
 }
+
+variable "boundary_version" {
+  description = "Boundary Enterprise version installed on the self-managed worker. Must not exceed the HCP controller version - a newer worker fails node enrollment with 'tls: internal error' / 'empty nonce'. HCP self-managed workers require the +ent build. Installed from the release archive, not the RPM repo - see boundary-worker.tf for why."
+  type        = string
+  default     = "1.0.1+ent"
+}
+
+variable "boundary_sha256" {
+  description = "SHA256 of boundary_<version>_linux_amd64.zip, from the published SHA256SUMS. Must be updated together with boundary_version."
+  type        = string
+  default     = "f74035e77cc4dab5c7f0f4c1fd886489ed6c8c6f928a456dea60f9424fec20bd"
+}

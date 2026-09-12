@@ -1,0 +1,40 @@
+status: error
+time: Thu, 10 Sep 2026 10:08:39 +0000
+detail:
+('scripts-user', RuntimeError('Runparts: 1 failures (part-001) in 1 attempted commands'))
+=== TAIL cloud-init-output ===
+ Package                   Architecture Version           Repository       Size
+================================================================================
+Installing:
+ boundary-enterprise       x86_64       1.0.2+ent-1       hashicorp       190 M
+
+Transaction Summary
+================================================================================
+Install  1 Package
+
+Total download size: 190 M
+Installed size: 259 M
+Downloading Packages:
+boundary-enterprise-1.0.2+ent-1.x86_64.rpm       13 MB/s | 190 MB     00:14    
+--------------------------------------------------------------------------------
+Total                                            13 MB/s | 190 MB     00:14     
+Hashicorp Stable - x86_64                        95 kB/s | 1.7 kB     00:00    
+Importing GPG key 0xCA026560:
+ Userid     : "HashiCorp Security (HashiCorp Package Signing) <security+packaging@hashicorp.com>"
+ Fingerprint: D55C 0D1A C78A 8D81 26CB 631C FC9C A96A CA02 6560
+ From       : https://rpm.releases.hashicorp.com/gpg
+Key imported successfully
+Import of key(s) didn't help, wrong key(s)?
+Public key for boundary-enterprise-1.0.2+ent-1.x86_64.rpm is not installed. Failing package is: boundary-enterprise-1.0.2+ent-1.x86_64
+ GPG Keys are configured as: https://rpm.releases.hashicorp.com/gpg
+The downloaded packages were saved in cache until the next successful transaction.
+You can remove cached packages by executing 'dnf clean packages'.
+Error: GPG check FAILED
+2026-09-10 10:08:38,953 - cc_scripts_user.py[WARNING]: Failed to run module scripts-user (scripts in /var/lib/cloud/instance/scripts)
+2026-09-10 10:08:38,957 - util.py[WARNING]: Running module scripts-user (<module 'cloudinit.config.cc_scripts_user' from '/usr/lib/python3.9/site-packages/cloudinit/config/cc_scripts_user.py'>) failed
+Cloud-init v. 22.2.2 finished at Thu, 10 Sep 2026 10:08:39 +0000. Datasource DataSourceEc2.  Up 142.80 seconds
+=== boundary installed? ===
+which: no boundary in (/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin)
+which: no boundary-enterprise in (/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin)
+ls: cannot access '/etc/boundary*': No such file or directory
+

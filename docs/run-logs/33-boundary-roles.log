@@ -1,0 +1,27 @@
+### 7d. roles in the PROJECT scope; principals are the managed groups
+    each tier names its OWN target id - ids=* here would be privilege escalation
+
+$ boundary roles create -scope-id p_vdOVUBaoKi -name viewer
+  r_YjeO9HWZey  name=viewer  principal=mgoidc_tnj4qkxCc2
+       grant: ids=*;type=target;actions=list,no-op
+       grant: ids=ttcp_QL8eAjhITq;type=target;actions=authorize-session
+       grant: ids=*;type=session;actions=list,read:self,cancel:self
+
+$ boundary roles create -scope-id p_vdOVUBaoKi -name operator
+  r_v2o8dZkjCz  name=operator  principal=mgoidc_EJxucON49R
+       grant: ids=ttcp_pOHfiqkgLC;type=target;actions=authorize-session
+       grant: ids=*;type=host-catalog;actions=list
+       grant: ids=*;type=host;actions=list
+       grant: ids=*;type=host-set;actions=list
+       grant: ids=*;type=target;actions=list,no-op,read
+       grant: ids=*;type=session;actions=list,read:self,cancel:self
+
+$ boundary roles create -scope-id p_vdOVUBaoKi -name admin
+  r_a9ScQSrj03  name=admin  principal=mgoidc_2KNhP1ZYCz
+       grant: ids=*;type=target;actions=*
+       grant: ids=*;type=session;actions=*
+       grant: ids=*;type=credential-store;actions=*
+       grant: ids=*;type=credential-library;actions=*
+       grant: ids=*;type=host-catalog;actions=*
+       grant: ids=*;type=host-set;actions=*
+       grant: ids=*;type=host;actions=*

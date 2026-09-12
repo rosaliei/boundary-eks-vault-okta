@@ -292,3 +292,83 @@ roleRef:
   kind: Role
   name: admin
   apiGroup: rbac.authorization.k8s.io
+
+---
+# =============================================================================
+# VAULT'S OWN CREDENTIAL — how Vault authenticates to the Kubernetes API
+#
+# Vault does not create the ServiceAccounts above; it mints short-lived tokens
+# FOR them via the TokenRequest API. To do that it needs its own credential.
+#
+# Two properties matter here, and they must land together:
+#
+#   1. resourceNames — without it, "create serviceaccounts/token" means "mint a
+#      token for ANY ServiceAccount in the cluster", including ones bound to
+#      cluster-admin. That is a privilege-escalation path.
+#
+#   2. a non-expiring credential — kubectl create token --duration=8760h is
+#      silently capped by the API server (measured: EKS grants exactly 24h), so
+#      a TokenRequest token dies a day later with an error that blames the
+#      ServiceAccount it was minting FOR. A Secret of type
+#      kubernetes.io/service-account-token has no exp claim at all.
+#
+# Attaching (2) without (1) is strictly worse than doing neither.
+#
+# If Vault runs INSIDE this cluster, none of this is needed: bind the Role to
+# the Vault pod's own ServiceAccount and use `vault write -f kubernetes/config`
+# with no arguments. Vault then reads its own projected token, which the kubelet
+# rotates forever. This block is the EXTERNAL-Vault shape.
+# =============================================================================
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-secrets
+  namespace: demo-app
+  labels:
+    app.kubernetes.io/component: "rbac"
+    rbac.vault.io/role: "token-minter"
+---
+# Namespaced Role, NOT a ClusterRole: a ClusterRole with resourceNames restricts
+# by name but not by namespace, so a "vault-viewer" in any other namespace would
+# also match.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-token-creator
+  namespace: demo-app
+rules:
+  - apiGroups: [""]
+    resources: ["serviceaccounts/token"]
+    verbs: ["create"]
+    resourceNames: ["vault-viewer", "vault-operator", "vault-admin"]
+  # Reading a ServiceAccount is harmless; minting a token as one is not.
+  # resourceNames cannot restrict "list", so only "get" is granted.
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-token-creator
+  namespace: demo-app
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vault-token-creator
+subjects:
+  - kind: ServiceAccount
+    name: vault-secrets
+    namespace: demo-app
+---
+# Since Kubernetes 1.24 these are not auto-created. The token inside has no exp
+# claim. Treat it as a credential: it is long-lived by design.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-secrets-token
+  namespace: demo-app
+  annotations:
+    kubernetes.io/service-account.name: vault-secrets
+type: kubernetes.io/service-account-token

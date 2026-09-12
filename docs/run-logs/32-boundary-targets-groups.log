@@ -1,0 +1,19 @@
+### 7e. one TCP target per tier, port 443, egress pinned to the worker
+    egress_worker_filter: "/name" == "kst-eks-ap-southeast-1-worker-01"
+$ boundary targets create tcp -scope-id p_vdOVUBaoKi -name eks-api-viewer -default-port 443
+  ttcp_QL8eAjhITq  name=eks-api-viewer  port=443  max_session=28800s  host_source=hsst_reHK62I9jW
+$ boundary targets create tcp -scope-id p_vdOVUBaoKi -name eks-api-operator -default-port 443
+  ttcp_pOHfiqkgLC  name=eks-api-operator  port=443  max_session=28800s  host_source=hsst_reHK62I9jW
+$ boundary targets create tcp -scope-id p_vdOVUBaoKi -name eks-api-admin -default-port 443
+  ttcp_fGSa9fmcIL  name=eks-api-admin  port=443  max_session=28800s  host_source=hsst_reHK62I9jW
+
+### 7c. managed groups on the Okta OIDC auth method amoidc_eY8ldrT0GG
+$ boundary managed-groups create oidc -auth-method-id amoidc_eY8ldrT0GG -name viewers
+     filter: "eks-viewers" in "/token/groups"
+  mgoidc_tnj4qkxCc2  name=viewers
+$ boundary managed-groups create oidc -auth-method-id amoidc_eY8ldrT0GG -name operators
+     filter: "eks-operators" in "/token/groups"
+  mgoidc_EJxucON49R  name=operators
+$ boundary managed-groups create oidc -auth-method-id amoidc_eY8ldrT0GG -name admins
+     filter: "eks-admins" in "/token/groups"
+  mgoidc_2KNhP1ZYCz  name=admins

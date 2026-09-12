@@ -1,0 +1,13 @@
+status: running
+time: Thu, 10 Sep 2026 10:31:22 +0000
+detail:
+Running in stage: modules-final
+=== binary ===
+/var/lib/amazon/ssm/i-08e8b7feab4d59246/document/orchestration/5cce7fe1-8a2f-4048-bef9-8223529de2ac/awsrunShellScript/0.awsrunShellScript/_script.sh: line 3: /usr/bin/boundary: No such file or directory
+=== service ===
+Failed to get unit file state for boundary-worker.service: No such file or directory
+inactive
+=== config ===
+ls: cannot access '/etc/boundary/': No such file or directory
+ls: cannot access '/opt/boundary/worker': No such file or directory
+

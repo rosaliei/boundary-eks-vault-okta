@@ -113,9 +113,35 @@ resource "aws_instance" "boundary_worker" {
     set -euxo pipefail
 
     # HCP Boundary self-managed workers require the Enterprise binary.
-    dnf install -y dnf-plugins-core
-    dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-    dnf install -y boundary-enterprise
+    #
+    # The hashicorp RPM repo cannot be used for this: the boundary-enterprise
+    # package is still signed with the retired key a621e701, while the repo's
+    # gpgkey endpoint now serves CA026560. dnf therefore fails with
+    #   "Import of key(s) didn't help, wrong key(s)? / Error: GPG check FAILED"
+    # and, under `set -e`, that aborts the whole of this script - leaving no
+    # binary, no worker.hcl, no unit file and no auth token.
+    #
+    # Install the pinned release archive and verify it by SHA256 instead. This
+    # drops the GPG/keyring dependency entirely and makes the version explicit.
+    dnf install -y unzip
+
+    BOUNDARY_VERSION="${var.boundary_version}"
+    BOUNDARY_SHA256="${var.boundary_sha256}"
+
+    # '+' is not URL-safe in a path segment; releases.hashicorp.com wants %2B.
+    ver_enc="$${BOUNDARY_VERSION//+/%2B}"
+    base="https://releases.hashicorp.com/boundary/$${ver_enc}"
+    zip="/tmp/boundary_$${BOUNDARY_VERSION}_linux_amd64.zip"
+
+    curl -fsSL --retry 5 --retry-delay 3 \
+      "$${base}/boundary_$${ver_enc}_linux_amd64.zip" -o "$${zip}"
+
+    echo "$${BOUNDARY_SHA256}  $${zip}" | sha256sum -c -
+
+    unzip -o "$${zip}" boundary -d /usr/bin
+    chmod 0755 /usr/bin/boundary
+    rm -f "$${zip}"
+    /usr/bin/boundary version
 
     id -u boundary >/dev/null 2>&1 || useradd --system --shell /sbin/nologin boundary
 

@@ -1,0 +1,8 @@
+$ boundary workers read -id w_Utxtk12Y90
+ID:              w_Utxtk12Y90
+Name:            kst-eks-ap-southeast-1-worker-01
+Address:         0.0.0.0:9202
+ReleaseVersion:  Boundary v1.0.1+ent
+Last Status:     2026-09-10T10:36:58.359321Z
+Active Conns:    0
+Tags:            {"type":["eks","vpc","private"]}

@@ -1,0 +1,8 @@
+### 8b. a scoped broker token - NOT root. Boundary needs periodic + orphan + renewable.
+$ vault policy write boundary-broker -
+Success! Uploaded policy: boundary-broker
+$ vault token create -policy=boundary-broker -period=24h -orphan -renewable=true
+  token:      hvs.CAESIDNf...[redacted]  (len 95)
+  accessor:   MonQoh27bdxmWse5Yqi6FjZE
+  policies:   boundary-broker,default
+  period:     86400s   renewable: True   orphan: True

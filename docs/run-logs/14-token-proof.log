@@ -1,0 +1,16 @@
+# identity carried by the Vault-issued token
+$ kubectl auth whoami --token=<vault token>
+ATTRIBUTE                                           VALUE
+Username                                            system:serviceaccount:demo-app:vault-viewer
+UID                                                 002c8e21-4341-44c7-8835-20abf3197e6d
+Groups                                              [system:serviceaccounts system:serviceaccounts:demo-app system:authenticated]
+Extra: authentication.kubernetes.io/credential-id   [JTI=ca7753ba-75ab-4099-8043-b1a39350cd13]
+
+$ kubectl -n demo-app get pods --token=<vault token>          # expect: allowed
+No resources found in demo-app namespace.
+
+$ kubectl -n demo-app delete deploy dummy --token=<vault token>  # expect: FORBIDDEN
+Error from server (Forbidden): deployments.apps "dummy" is forbidden: User "system:serviceaccount:demo-app:vault-viewer" cannot delete resource "deployments" in API group "apps" in the namespace "demo-app"
+
+$ kubectl -n kube-system get pods --token=<vault token>       # expect: FORBIDDEN
+Error from server (Forbidden): pods is forbidden: User "system:serviceaccount:demo-app:vault-viewer" cannot list resource "pods" in API group "" in the namespace "kube-system"

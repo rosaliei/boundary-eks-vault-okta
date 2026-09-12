@@ -1,0 +1,60 @@
+aws_instance.boundary_worker: Destroying... [id=i-08e8b7feab4d59246]
+aws_instance.boundary_worker: Still destroying... [id=i-08e8b7feab4d59246, 00m10s elapsed]
+aws_instance.boundary_worker: Still destroying... [id=i-08e8b7feab4d59246, 00m20s elapsed]
+aws_instance.boundary_worker: Still destroying... [id=i-08e8b7feab4d59246, 00m30s elapsed]
+aws_instance.boundary_worker: Destruction complete after 31s
+aws_instance.boundary_worker: Creating...
+aws_instance.boundary_worker: Still creating... [00m10s elapsed]
+aws_instance.boundary_worker: Creation complete after 14s [id=i-0677cd65c410110a6]
+
+Apply complete! Resources: 1 added, 0 changed, 1 destroyed.
+
+Outputs:
+
+boundary_worker_instance_id = "i-0677cd65c410110a6"
+boundary_worker_private_ip = "10.0.1.240"
+boundary_worker_registration = <<EOT
+# 1. Open a shell on the worker (private subnet, SSM only):
+aws ssm start-session --target i-0677cd65c410110a6 --region ap-southeast-1 --profile pegb
+
+# 2. On the instance, read the auth request token:
+sudo /usr/local/bin/worker-auth-token
+
+# 3. Back on your laptop, activate it against HCP Boundary:
+export BOUNDARY_ADDR=https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud
+# The name must be set here, not in worker.hcl - it is what the eks-api
+# target's egress_worker_filter matches on.
+boundary workers create worker-led \
+  -name=kst-eks-ap-southeast-1-worker-01 \
+  -description="Self-managed worker with line of sight to the private EKS endpoint" \
+  -worker-generated-auth-token=<TOKEN>
+
+# 4. Confirm it is active:
+boundary workers list -format=json | jq '.items[] | {name, active_connection_count, release_version}'
+
+EOT
+boundary_worker_security_group_recommendation = "Create a security group allowing egress to https://6F66E12DC9593ADDD5CA21204650E2DA.gr7.ap-southeast-1.eks.amazonaws.com on port 443"
+boundary_worker_subnet_id = "subnet-0c698efb9bce87faf"
+cluster_certificate_authority_data = <sensitive>
+cluster_endpoint = "https://6F66E12DC9593ADDD5CA21204650E2DA.gr7.ap-southeast-1.eks.amazonaws.com"
+cluster_name = "hc-eks-cluster"
+cluster_oidc_issuer_url = "https://oidc.eks.ap-southeast-1.amazonaws.com/id/6F66E12DC9593ADDD5CA21204650E2DA"
+cluster_oidc_provider_arn = "arn:aws:iam::173310766280:oidc-provider/oidc.eks.ap-southeast-1.amazonaws.com/id/6F66E12DC9593ADDD5CA21204650E2DA"
+cluster_security_group_id = "sg-08e904e2a2af537e2"
+kubeconfig_command = "aws eks update-kubeconfig --region ap-southeast-1 --name hc-eks-cluster --profile pegb"
+nat_gateway_ids = [
+  "nat-0c6310a9c0251bafe",
+]
+node_security_group_id = "sg-02b176b338b854a55"
+private_subnet_ids = [
+  "subnet-0c698efb9bce87faf",
+  "subnet-03a960d152c5d540e",
+  "subnet-0a121d1926e39923e",
+]
+public_subnet_ids = [
+  "subnet-0424da752a2cd5c27",
+  "subnet-0221312a15432f005",
+  "subnet-0e1ace3ce57d3739d",
+]
+vpc_cidr_block = "10.0.0.0/16"
+vpc_id = "vpc-0896f885d52d99a6e"

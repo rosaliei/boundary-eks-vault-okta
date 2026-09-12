@@ -1,0 +1,19 @@
+$ kubectl -n vault wait --for=condition=Ready pod/vault-0 --timeout=180s
+pod/vault-0 condition met
+NAME      READY   STATUS    RESTARTS   AGE   IP           NODE                                            NOMINATED NODE   READINESS GATES
+vault-0   1/1     Running   0          38s   10.0.2.134   ip-10-0-2-195.ap-southeast-1.compute.internal   <none>           <none>
+
+$ kubectl -n vault exec vault-0 -- vault status
+Key             Value
+---             -----
+Seal Type       shamir
+Initialized     true
+Sealed          false
+Total Shares    1
+Threshold       1
+Version         2.0.4
+Build Date      2026-08-03T16:14:36Z
+Storage Type    inmem
+Cluster Name    vault-cluster-4d590103
+Cluster ID      edb034e1-f30a-2c42-46fc-d71a0ecc1c9d
+HA Enabled      false

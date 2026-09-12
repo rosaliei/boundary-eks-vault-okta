@@ -1,0 +1,16 @@
+...
+status: done
+time: Thu, 10 Sep 2026 10:32:03 +0000
+detail:
+DataSourceEc2
+=== binary ===
+
+Version information:
+  Build Date:          2026-09-09T13:34:15Z
+=== service ===
+enabled
+active
+=== auth token ===
+=== journal ===
+Sep 10 10:32:03 ip-10-0-1-91.ap-southeast-1.compute.internal systemd[1]: Started boundary-worker.service - Boundary Worker.
+

@@ -1,0 +1,21 @@
+### 7a. auto-created roles in the new project (the Default Grants trap)
+$ boundary roles list -scope-id p_vdOVUBaoKi
+  r_zWxd9Jq17q  name=Administration  grant_scope=-
+  r_GUY4mlWlYL  name=Default Grants  grant_scope=-
+  -> grants on r_GUY4mlWlYL:
+       ids=*;type=session;actions=list,read:self,cancel:self
+       type=target;actions=list
+       principal: u_auth
+$ boundary roles delete -id r_GUY4mlWlYL     # listing != authorize-session; this grants list to u_auth
+jq: error: $RID is not defined at <top-level>, line 1:
+if .status_code==204 or .item then "  DELETED \($RID // "")" else "  \(.api_error.message // .)" end                                                
+jq: 1 compile error
+  remaining roles: 1
+
+### 7e. host catalog / host / host set   (EKS endpoint = 6F66E12DC9593ADDD5CA21204650E2DA.gr7.ap-southeast-1.eks.amazonaws.com)
+$ boundary host-catalogs create static -scope-id p_vdOVUBaoKi -name eks-hosts
+  host catalog: hcst_0qRIdLLWl5
+$ boundary hosts create static -host-catalog-id hcst_0qRIdLLWl5 -address <eks endpoint hostname>
+  host:         hst_l34NxtNSQX   address=6F66E12DC9593ADDD5CA21204650E2DA.gr7.ap-southeast-1.eks.amazonaws.com
+$ boundary host-sets create static -host-catalog-id hcst_0qRIdLLWl5 -name eks-api-hosts
+  host set:     hsst_reHK62I9jW  (contains hst_l34NxtNSQX)

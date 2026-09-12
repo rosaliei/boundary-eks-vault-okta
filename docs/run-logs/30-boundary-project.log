@@ -1,0 +1,8 @@
+### 7a. create project scope 'eks-access' under o_cr9ncHM3kS
+$ boundary scopes create -scope-id o_cr9ncHM3kS -name eks-access
+  id:          p_vdOVUBaoKi
+  name:        eks-access
+  type:        project
+  parent:      o_cr9ncHM3kS
+  created:     2026-09-10T12:09:56.078522Z
+  actions:     no-op,read,update,delete,set-alias-suffix,remove-alias-suffix

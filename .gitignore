@@ -19,6 +19,8 @@ crash.log
 *.tfvars
 !*.tfvars.example
 vault-sa-token.txt
+# contains a live Excalidraw+ API key
+.mcp.json
 *.pem
 *.key
 kubeconfig*
@@ -30,3 +32,6 @@ eks-ca.crt
 claude-run.log
 .DS_Store
 ca.crt
+
+# Saved plan files (extensionless, so *.tfplan misses them)
+tfplan*

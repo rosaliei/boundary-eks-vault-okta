@@ -87,38 +87,66 @@ TLS is end to end between kubectl and the EKS API — every hop in between relay
 ciphertext it cannot read. Hence `--tls-server-name` and the cluster CA on the
 kubectl command: you dial `127.0.0.1`, but you validate the EKS certificate.
 
-### Editable diagrams
+### Live Excalidraw boards
 
-The three SVGs above are generated and committed as-is. Excalidraw sources are
-in `docs/` if you want to redraw or extend them — open at
-[excalidraw.com](https://excalidraw.com) via *File → Open*:
+Working boards, kept up to date by hand. Placeholders — swap in your own links
+if you fork this.
+
+| Board | What it shows |
+|---|---|
+| [Architecture — detailed](https://app.excalidraw.com/s/9hD7S5FgGWN/6qkBs97pPLA) | high level, the Vault credential pipeline, traffic flow, the two tokens, build order |
+| [Manual runbook](https://app.excalidraw.com/s/9hD7S5FgGWN/6nhIbrWDS4R) | all 9 build steps as command cards, plus captured output from a real run |
+| [Step 7 — Boundary build evidence](https://app.excalidraw.com/s/9hD7S5FgGWN/5A6xg4Owie) | CLI output from building the Boundary side, and where steps 8/9 stand |
+| [Scratch / working notes](https://app.excalidraw.com/s/9hD7S5FgGWN/4WYkgQqBXUp) | original console walkthrough and annotations |
+
+### Editable sources in the repo
+
+Committed `.excalidraw` files — open at [excalidraw.com](https://excalidraw.com)
+via *File → Open*:
 
 | File | What it shows |
 |---|---|
 | [docs/architecture.excalidraw](docs/architecture.excalidraw) | the whole system, with the numbered runtime flow |
 | [docs/setup-steps.excalidraw](docs/setup-steps.excalidraw) | all 8 build steps, each with the trap that bites in it |
+| [docs/command-walkthrough.excalidraw](docs/command-walkthrough.excalidraw) | steps 3–8 as command cards |
 | [docs/boundary-okta-identity.excalidraw](docs/boundary-okta-identity.excalidraw) | original identity-flow sketch |
 | [docs/eks-detailed-analysis.excalidraw](docs/eks-detailed-analysis.excalidraw) | original EKS analysis sketch |
 
+Terminal output from a real build is in [docs/run-logs/](docs/run-logs/), and
+console screenshots in [screenshots/](screenshots/).
+
 ## Reference values
 
-Replace with your own; these are the deployed values referenced throughout.
+Replace with your own. **Everything except the region, cluster name, Boundary
+cluster and Okta auth method is regenerated on every rebuild** — the API
+endpoint, all `ttcp_` target ids, the project id, the worker id and the Vault
+NLB hostname all change. Re-read them from `terraform output` and
+`boundary targets list` rather than trusting this block.
+
+Values below are from the 2026-09-10 rebuild.
 
 ```
 Region / profile   ap-southeast-1 / pegb
-Cluster            hc-eks-cluster  (k8s 1.35)
-API endpoint       BB0C8B66351A596AC1A823FDBAF38F90.gr7.ap-southeast-1.eks.amazonaws.com
-VPC                vpc-0642cd1b6fe3748ef  (10.0.0.0/16)
+Cluster            hc-eks-cluster  (k8s 1.35, auth mode API)
+API endpoint       6F66E12DC9593ADDD5CA21204650E2DA.gr7.ap-southeast-1.eks.amazonaws.com
+                   private 10.0.2.250 / 10.0.1.7
+VPC                10.0.0.0/16   private 10.0.1-3.0/24   public 10.0.101-103.0/24
 Boundary           https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud
-Org / project      o_cr9ncHM3kS (kst-devops) / p_UqsGRifciZ (eks-access)
+Org / project      o_cr9ncHM3kS (kst-devops) / p_vdOVUBaoKi (eks-access)
 Worker             kst-eks-ap-southeast-1-worker-01
-Okta auth method   amoidc_eY8ldrT0GG (HC Okta Test)
-Vault (internal)   a7ecb200b200048908bda9672c4103e7-...elb.ap-southeast-1.amazonaws.com:8200
+                   w_Utxtk12Y90   10.0.1.240   Boundary v1.0.1+ent
+Okta auth method   amoidc_eY8ldrT0GG (HC OKTA)  client 0oa174q3bo5aaqXHr698
+Vault (internal)   aa9fd99f17e7c4b158a9fe0c3281efe1-...elb.ap-southeast-1.amazonaws.com:8200
+Credential store   csvlt_srztC311cg
 
 Targets, one per tier - each brokers its own Vault credential:
-  eks-api-viewer     ttcp_TbCSQnjLoW    ->  kubernetes/creds/viewer
-  eks-api-operator   ttcp_tGgVrCRMyJ    ->  kubernetes/creds/operator
-  eks-api-admin      ttcp_u7eFOOlXF1    ->  kubernetes/creds/admin
+  eks-api-viewer     ttcp_QL8eAjhITq    ->  clvlt_lUnnlUrd8r  ->  kubernetes/creds/viewer
+  eks-api-operator   ttcp_pOHfiqkgLC    ->  clvlt_A0vzKjRvRs  ->  kubernetes/creds/operator
+  eks-api-admin      ttcp_fGSa9fmcIL    ->  clvlt_14kvRIYp2z  ->  kubernetes/creds/admin
+
+Managed groups on the Okta auth method:
+  viewers   mgoidc_tnj4qkxCc2      operators mgoidc_EJxucON49R
+  admins    mgoidc_2KNhP1ZYCz
 ```
 
 ---
@@ -218,36 +246,47 @@ secrets engine does the opposite: it *creates* tokens via the TokenRequest API,
 which needs `create` on `serviceaccounts/token`. Without this, configuration
 succeeds and credential requests return 403.
 
-```bash
-kubectl create serviceaccount vault-auth -n kube-system
+This is applied by `k8s/rbac.yaml` in step 2 — the ServiceAccount, the Role, the
+RoleBinding and the Secret-backed token all live there. Nothing to paste:
 
-kubectl apply -f - <<'EOF'
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: vault-token-creator
+```bash
+kubectl -n demo-app get sa vault-secrets
+kubectl -n demo-app describe role vault-token-creator
+```
+
+The grant that matters:
+
+```yaml
 rules:
   - apiGroups: [""]
     resources: ["serviceaccounts/token"]
     verbs: ["create"]
-  - apiGroups: [""]
-    resources: ["serviceaccounts"]
-    verbs: ["get", "list"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: vault-token-creator
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: vault-token-creator
-subjects:
-  - kind: ServiceAccount
-    name: vault-auth
-    namespace: kube-system
-EOF
+    resourceNames: ["vault-viewer", "vault-operator", "vault-admin"]
 ```
+
+> **`resourceNames` is load-bearing, not decoration.** Without it,
+> `create` on `serviceaccounts/token` lets Vault mint a token for *any*
+> ServiceAccount in the cluster — including one bound to `cluster-admin`. That
+> is a documented privilege-escalation path. Verified live: with the three names
+> present, minting `vault-viewer` succeeds and minting `default` is refused with
+> `serviceaccounts "default" is forbidden`.
+>
+> `create` normally cannot be name-scoped, because the object does not exist yet.
+> Subresources are the exception: TokenRequest posts to
+> `/serviceaccounts/{name}/token`, so the name is known at authorization time.
+
+A **namespaced Role**, not a ClusterRole. A ClusterRole with `resourceNames`
+restricts by name but not namespace — a `vault-viewer` in any other namespace
+would still match.
+
+Two ServiceAccounts, deliberately:
+
+| ServiceAccount | Grant | Purpose |
+|---|---|---|
+| `demo-app/vault-secrets` | the Role above | **mint** tokens (secrets engine) |
+| `kube-system/vault-auth` | `system:auth-delegator` | **validate** tokens (auth method, only if you enable it) |
+
+Never one identity for both. Minting is the dangerous power.
 
 > `kubectl auth can-i create serviceaccounts/token --as=...` reports **`no`
 > even when this is granted** — it mis-evaluates subresources under
@@ -275,7 +314,7 @@ KUBE_CA=$(aws eks describe-cluster --name hc-eks-cluster --region ap-southeast-1
   --query 'cluster.certificateAuthority.data' --output text | base64 -d)
 
 vault write kubernetes/config \
-  kubernetes_host="https://BB0C8B66351A596AC1A823FDBAF38F90.gr7.ap-southeast-1.eks.amazonaws.com" \
+  kubernetes_host="https://6F66E12DC9593ADDD5CA21204650E2DA.gr7.ap-southeast-1.eks.amazonaws.com" \
   kubernetes_ca_cert="$KUBE_CA" \
   service_account_jwt="$TOKEN_REVIEW_JWT" \
   disable_local_ca_jwt=true
@@ -469,7 +508,7 @@ sessions.
 In the project:
 
 1. Host catalog → **Static**, name `eks-hosts`
-2. Host `eks-api`, address `BB0C8B66...gr7.ap-southeast-1.eks.amazonaws.com`
+2. Host `eks-api`, address `6F66E12D...gr7.ap-southeast-1.eks.amazonaws.com`
    — the hostname, not an IP; the worker resolves it inside the VPC to the
    private endpoint addresses
 3. Host set `eks-api-hosts` containing that host
@@ -541,8 +580,8 @@ tiering is enforced**: the credential you receive is decided by which target
 your role lets you authorize, not by anything you type.
 
 ```
-viewer   role -> ids=ttcp_TbCSQnjLoW ; authorize-session
-operator role -> ids=ttcp_tGgVrCRMyJ ; authorize-session
+viewer   role -> ids=ttcp_QL8eAjhITq ; authorize-session
+operator role -> ids=ttcp_pOHfiqkgLC ; authorize-session
 ```
 
 A wildcard (`ids=*`) here is a privilege escalation: a viewer could authorize
@@ -557,7 +596,7 @@ export BOUNDARY_ADDR=https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashi
 boundary authenticate oidc -auth-method-id=amoidc_eY8ldrT0GG
 
 # terminal 1 - session AND credential, in one command
-boundary connect -target-id=ttcp_TbCSQnjLoW -listen-port=8443 -format=json > /tmp/sess.json
+boundary connect -target-id=ttcp_QL8eAjhITq -listen-port=8443 -format=json > /tmp/sess.json
 ```
 
 `8443` is the port on **your laptop**; `443` is what the worker dials at the far
@@ -573,7 +612,7 @@ aws eks describe-cluster --name hc-eks-cluster --region ap-southeast-1 --profile
 
 kubectl --server=https://127.0.0.1:8443 \
   --certificate-authority=/tmp/eks-ca.crt \
-  --tls-server-name=BB0C8B66351A596AC1A823FDBAF38F90.gr7.ap-southeast-1.eks.amazonaws.com \
+  --tls-server-name=6F66E12DC9593ADDD5CA21204650E2DA.gr7.ap-southeast-1.eks.amazonaws.com \
   --token="$TOKEN" -n demo-app get pods
 ```
 
@@ -590,6 +629,100 @@ Measured with `kubectl auth can-i` through each tier's own session:
 | admin | yes | yes | yes | yes | no |
 
 Note `viewer` can read Secrets — see Security notes.
+
+# Problems found on the 2026-09-10/12 rebuild
+
+Everything in this section was hit, measured and fixed on a live rebuild. Raw
+terminal output is in [docs/run-logs/](docs/run-logs/).
+
+**Vault's own credential expires after ~24 hours, and the error blames the wrong
+ServiceAccount.** Step 3d originally ran
+`kubectl create token vault-auth --duration=8760h`. The API server silently caps
+that — **measured on EKS: requested 8760h, granted exactly 24.0h**. A day later
+every credential request fails with
+`failed to create a service account token for demo-app/vault-viewer: Unauthorized`,
+which points at `demo-app/vault-viewer` while the dead credential is
+`kube-system/vault-auth`. You cannot raise the cap: it comes from the API
+server's `--service-account-max-token-expiration`, and on EKS the control plane
+is managed. There is a standing request for it in
+[aws/containers-roadmap#1836](https://github.com/aws/containers-roadmap/issues/1836).
+Fixed by using a `kubernetes.io/service-account-token` Secret, whose token has
+no `exp` claim at all — see step 3b.
+
+**The unscoped token-creator grant was a privilege-escalation path.** `create` on
+`serviceaccounts/token` with no `resourceNames` lets Vault mint a token for any
+ServiceAccount in the cluster, including any bound to `cluster-admin`. The 24h
+expiry was masking it; attaching a non-expiring token would have made it
+permanent. Verified after scoping: minting `vault-viewer` succeeds, minting
+`default` returns `serviceaccounts "default" is forbidden`.
+
+**Vault ignores its own auto-rotating credential.** `disable_local_ca_jwt=true`
+means "do not read the pod's mounted token". Vault runs *in* this cluster, so it
+already has a projected token the kubelet rotates forever — and the external
+recipe tells it to ignore that and use a pasted one instead. If Vault is
+in-cluster, bind the Role to the Vault pod's ServiceAccount and run
+`vault write -f kubernetes/config` with no arguments.
+
+**`service_account_jwt` does not have to be a ServiceAccount JWT.** Tested: an
+IAM token from `aws eks get-token` — a presigned STS URL, not a JWT — works
+fine. Vault sends whatever string it holds as a bearer token and lets the API
+server decide. The field name is misleading.
+
+**`kubectl -n vault rollout status statefulset/vault` fails.** The Vault chart's
+StatefulSet uses `OnDelete`, so the command errors with
+`rollout status is only available for RollingUpdate strategy type`. Use
+`kubectl -n vault wait --for=condition=Ready pod/vault-0 --timeout=180s`.
+
+**The Boundary worker never installed — two stacked causes.** First,
+`Error: GPG check FAILED`: the HashiCorp repo's `gpgkey` endpoint serves
+`CA026560` while the `boundary-enterprise` RPM is signed with the retired
+`a621e701`. Under `set -euxo pipefail` that aborts the whole cloud-init, leaving
+no binary, no `worker.hcl`, no unit file. Replaced with a pinned release archive
+verified by SHA256. Second, a worker newer than its controller cannot enrol —
+`1.0.2+ent` against a `1.0.1` controller fails with
+`(nodeenrollment.registration.validateFetchRequest) empty nonce` and
+`remote error: tls: internal error`. Both are now variables
+(`boundary_version`, `boundary_sha256`) in `terraform/variables.tf`.
+
+**An egress worker filter alone is not enough — multi-hop is required.** The
+client must reach *some* worker, and a self-managed worker in a private subnet
+advertises `0.0.0.0:9202` with no public IP. Sessions sit in `pending` and
+kubectl dies with `net/http: TLS handshake timeout`. Adding an ingress filter
+selecting the HCP-managed workers fixed it immediately:
+
+```
+egress_worker_filter  = "/name" == "kst-eks-ap-southeast-1-worker-01"
+ingress_worker_filter = "/name" matches "hcp-managed-worker.*"
+```
+
+**Worker filters are top-level target fields, not under `.attributes`.** Reading
+`.item.attributes.egress_worker_filter` returns nothing and makes a correctly
+configured target look unconfigured. They live at `.item.egress_worker_filter`.
+`worker_info` in an `authorize-session` response is likewise not populated by
+this version — do not diagnose from its emptiness.
+
+**`-vault-token env://VAR` is not resolved by the Boundary CLI.** Creating a
+Vault credential store with it sends the literal string `env://VAR`, and Vault
+answers `403 permission denied / invalid token`. Only `-token` supports that
+indirection. Pass the value.
+
+**Okta trial orgs cannot issue machine-to-machine tokens.** The
+`client_credentials` grant is gated behind Okta's **NHI Authentication Tokens**
+SKU. The grant simply never appears in the access-policy rule UI, which looks
+like a configuration mistake and is not. One request settles it before you build
+anything around it:
+
+```bash
+curl -s https://<org>.okta.com/oauth2/<authServerId>/.well-known/openid-configuration \
+  | jq -r '.grant_types_supported'
+# no "client_credentials" -> the SKU is not enabled; the path is closed
+```
+
+**The admin `/32` breaks whenever your ISP rotates you.** `admin_public_cidrs`
+pinned to an old address locks `kubectl` out entirely, and every symptom looks
+like a cluster fault. Check `curl https://checkip.amazonaws.com` against
+`aws eks describe-cluster --query 'cluster.resourcesVpcConfig.publicAccessCidrs'`
+before debugging anything else.
 
 # Problems along the way
 
