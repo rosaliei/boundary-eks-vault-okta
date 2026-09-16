@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Zero-Trust Kubernetes Access — Okta, HCP Boundary, Vault, Amazon EKS — kst-devops.com">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f141d"/>
+      <stop offset="1" stop-color="#1a2233"/>
+    </linearGradient>
+    <linearGradient id="rule" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#d8434b"/>
+      <stop offset="0.33" stop-color="#e8c04a"/>
+      <stop offset="0.66" stop-color="#a888ee"/>
+      <stop offset="1" stop-color="#f09a4a"/>
+    </linearGradient>
+    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M30 0H0V30" fill="none" stroke="#ffffff" stroke-opacity="0.045" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="300" rx="14" fill="url(#bg)"/>
+  <rect width="1200" height="300" rx="14" fill="url(#grid)"/>
+
+  <!-- left: the path, drawn as four nodes and a tunnel -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#a2abbd">
+    <circle cx="90" cy="150" r="22" fill="#1a2233" stroke="#4d5669" stroke-width="1.5"/>
+    <text x="90" y="155" text-anchor="middle" fill="#e7eaf1" font-size="14">you</text>
+
+    <line x1="112" y1="150" x2="168" y2="150" stroke="#4d5669" stroke-width="1.5"/>
+    <rect x="170" y="126" width="88" height="48" rx="8" fill="#2c2344" stroke="#a888ee" stroke-width="1.5"/>
+    <text x="214" y="155" text-anchor="middle" fill="#e7eaf1">Okta</text>
+
+    <line x1="258" y1="150" x2="314" y2="150" stroke="#4d5669" stroke-width="1.5"/>
+    <rect x="316" y="126" width="108" height="48" rx="8" fill="#3a2024" stroke="#f0666d" stroke-width="1.5"/>
+    <text x="370" y="155" text-anchor="middle" fill="#e7eaf1">Boundary</text>
+
+    <!-- tunnel into the private VPC -->
+    <path d="M424 150 C 470 150, 470 150, 520 150" fill="none" stroke="#f0666d" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <rect x="522" y="96" width="196" height="108" rx="10" fill="none" stroke="#4fc47e" stroke-width="1.5" stroke-dasharray="2 4"/>
+    <text x="620" y="112" text-anchor="middle" fill="#4fc47e" font-size="11" letter-spacing="1.5">PRIVATE VPC</text>
+
+    <rect x="540" y="126" width="72" height="48" rx="8" fill="#3a3118" stroke="#e8c04a" stroke-width="1.5"/>
+    <text x="576" y="155" text-anchor="middle" fill="#e7eaf1">Vault</text>
+    <rect x="630" y="126" width="72" height="48" rx="8" fill="#1e2a3a" stroke="#6fb6ff" stroke-width="1.5"/>
+    <text x="666" y="155" text-anchor="middle" fill="#e7eaf1">EKS</text>
+    <line x1="612" y1="150" x2="630" y2="150" stroke="#4d5669" stroke-width="1.5"/>
+
+    <text x="90" y="200" text-anchor="middle" font-size="11">Okta ID token</text>
+    <text x="370" y="200" text-anchor="middle" font-size="11">authorize-session</text>
+    <text x="620" y="226" text-anchor="middle" font-size="11">15-min ServiceAccount token</text>
+  </g>
+
+  <!-- right: title -->
+  <g font-family="ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+    <text x="770" y="118" fill="#e7eaf1" font-size="40" font-weight="700" letter-spacing="-0.5">Zero-Trust</text>
+    <text x="770" y="162" fill="#e7eaf1" font-size="40" font-weight="700" letter-spacing="-0.5">Kubernetes Access</text>
+    <rect x="770" y="178" width="360" height="3" rx="1.5" fill="url(#rule)"/>
+    <text x="770" y="208" fill="#a2abbd" font-size="15">Okta  ·  HCP Boundary  ·  HashiCorp Vault  ·  Amazon EKS</text>
+    <text x="770" y="234" fill="#a2abbd" font-size="13">no kubeconfig · no standing credential · no inbound path</text>
+  </g>
+
+  <!-- domain -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+    <rect x="1002" y="256" width="170" height="26" rx="13" fill="#0f141d" stroke="#4d5669" stroke-width="1"/>
+    <text x="1087" y="273" text-anchor="middle" fill="#4fc47e" font-size="12.5">kst-devops.com</text>
+  </g>
+</svg>

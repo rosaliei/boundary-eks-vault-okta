@@ -1,9 +1,37 @@
-# Zero-Trust Kubernetes Access
+<p align="center">
+  <a href="https://kst-devops.com"><img src="docs/banner.svg" alt="Zero-Trust Kubernetes Access — Okta · HCP Boundary · Vault · Amazon EKS — kst-devops.com" width="100%"></a>
+</p>
 
-**Okta · HCP Boundary · HashiCorp Vault · Amazon EKS**
-Identity-driven, short-lived, RBAC-scoped access to a **private** Kubernetes API —
-with no kubeconfig distributed, no long-lived credential anywhere, and no
-inbound network path from the internet.
+<h1 align="center">Zero-Trust Kubernetes Access</h1>
+
+<p align="center">
+  Identity-driven, short-lived, RBAC-scoped access to a <b>private</b> Kubernetes API —<br>
+  no kubeconfig distributed, no long-lived credential anywhere, no inbound network path from the internet.
+</p>
+
+<p align="center">
+  <img alt="Terraform" src="https://img.shields.io/badge/Terraform-1.9-7B42BC?logo=terraform&logoColor=white">
+  <img alt="Amazon EKS" src="https://img.shields.io/badge/Amazon_EKS-1.35-FF9900?logo=kubernetes&logoColor=white">
+  <img alt="HashiCorp Vault" src="https://img.shields.io/badge/Vault-k8s_secrets_engine-FFD814?logo=vault&logoColor=black">
+  <img alt="HCP Boundary" src="https://img.shields.io/badge/HCP_Boundary-PAM-F24C53?logo=boundary&logoColor=white">
+  <img alt="Okta" src="https://img.shields.io/badge/Okta-OIDC-007DC1?logo=okta&logoColor=white">
+  <img alt="Datadog" src="https://img.shields.io/badge/Datadog-monitors-632CA6?logo=datadog&logoColor=white">
+  <img alt="Packer" src="https://img.shields.io/badge/Packer-AMI-02A8EF?logo=packer&logoColor=white">
+  <img alt="Ansible" src="https://img.shields.io/badge/Ansible-role-EE0000?logo=ansible&logoColor=white">
+  <img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub_Actions-OIDC-2088FF?logo=githubactions&logoColor=white">
+</p>
+
+<p align="center">
+  <a href="https://github.com/rosaliei/boundary-eks-vault-okta/actions/workflows/infra.yml"><img alt="infra" src="https://github.com/rosaliei/boundary-eks-vault-okta/actions/workflows/infra.yml/badge.svg"></a>
+  <a href="https://github.com/rosaliei/boundary-eks-vault-okta/actions/workflows/ami-build.yml"><img alt="ami-build" src="https://github.com/rosaliei/boundary-eks-vault-okta/actions/workflows/ami-build.yml/badge.svg"></a>
+  <a href="https://github.com/rosaliei/boundary-eks-vault-okta/actions/workflows/scale.yml"><img alt="scale-workers" src="https://github.com/rosaliei/boundary-eks-vault-okta/actions/workflows/scale.yml/badge.svg"></a>
+  <a href="https://github.com/rosaliei/boundary-eks-vault-okta/actions/workflows/rotate-broker-creds.yml"><img alt="rotate-broker-creds" src="https://github.com/rosaliei/boundary-eks-vault-okta/actions/workflows/rotate-broker-creds.yml/badge.svg"></a>
+</p>
+
+<p align="center">
+  <a href="#start-here--the-five-scenes"><img alt="Diagrams hand-drawn in Excalidraw" src="https://img.shields.io/badge/diagrams-hand--drawn_in_Excalidraw-6965DB?logo=excalidraw&logoColor=white"></a>
+  <a href="https://kst-devops.com"><img alt="kst-devops.com" src="https://img.shields.io/badge/kst--devops.com-visit-4FC47E?logo=googlechrome&logoColor=white"></a>
+</p>
 
 ---
 
@@ -759,3 +787,11 @@ Known-weak by design in this build, and what changes for production:
   [`autoscaling/`](autoscaling/), pending first apply.
 - Vault to HCP Vault Dedicated with a private HVN endpoint, removing dev mode.
 - Session recording on the Boundary targets for a full audit trail.
+
+---
+
+<p align="center">
+  <sub>Designed, built by hand, drawn, then automated by <b>Kyaw Si Thu</b> ·
+  <a href="https://kst-devops.com">kst-devops.com</a> ·
+  <a href="https://github.com/rosaliei">@rosaliei</a></sub>
+</p>
