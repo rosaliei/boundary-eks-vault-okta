@@ -1,1 +1,0 @@
-$ boundary workers create worker-led -name=kst-eks-ap-southeast-1-worker-01

@@ -1,3 +1,0 @@
-### 8c-pre. can the in-VPC worker reach Vault on the internal NLB?
-$ curl http://aa9fd99f17e7c4b158a9fe0c3281efe1-0c3d14f36fd20f6b.elb.ap-southeast-1.amazonaws.com:8200/v1/sys/health   (run ON the worker via SSM)
-

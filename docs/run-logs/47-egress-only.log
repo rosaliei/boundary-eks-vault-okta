@@ -1,7 +1,0 @@
-### Step 9 with EGRESS FILTER ONLY (ingress hop removed)  2026-09-11
-$ boundary connect -target-id=ttcp_QL8eAjhITq -listen-port=8443 -format=json
-{"context":"Error from controller when performing authorize-session action against given target","status_code":500,"api_error":{"kind":"Internal","message":"targets.(Service).AuthorizeSession: vault.(Repository).Issue: unknown, unknown: error #0: Error making API request.\n\nURL: PUT http://aa9fd99f17e7c4b158a9fe0c3281efe1-0c3d14f36fd20f6b.elb.ap-southeast-1.amazonaws.com:8200/v1/kubernetes/creds/viewer\nCode: 500. Errors:\n\n* 1 error occurred:\n\t* failed to create a service account token for demo-app/vault-viewer: Unauthorized\n\n"}}
-  (exit code 1, no session established)
-
-$ kubectl --server=https://127.0.0.1:8443 ... -n demo-app get pods
-  The connection to the server 127.0.0.1:8443 was refused - no local listener was ever opened

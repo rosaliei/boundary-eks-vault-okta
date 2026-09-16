@@ -1,9 +1,0 @@
-$ vault write kubernetes/creds/viewer kubernetes_namespace=demo-app
-Key                          Value
----                          -----
-lease_id                     kubernetes/creds/viewer/xGwxRZxACD0qlAZ605mNhmob
-lease_duration               15m
-lease_renewable              false
-service_account_name         vault-viewer
-service_account_namespace    demo-app
-service_account_token        eyJhbGciOiJSUzI1Ni...[REDACTED]

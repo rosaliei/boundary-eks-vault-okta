@@ -11,7 +11,7 @@
 crash.log
 
 # State holds real secrets in cleartext - boundary/terraform.tfstate contains the
-# Vault broker token, terraform/terraform.tfstate the cluster CA. Never commit.
+# Vault broker token, aws/terraform.tfstate the cluster CA. Never commit.
 
 # -----------------------------------------------------------------------------
 # Secrets and local variable files
@@ -35,3 +35,10 @@ ca.crt
 
 # Saved plan files (extensionless, so *.tfplan misses them)
 tfplan*
+
+# Packer build output (autoscaling/packer)
+manifest.json
+__pycache__/
+
+# Terminal captures from real builds - kept locally, not committed
+docs/run-logs/

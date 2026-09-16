@@ -1,9 +1,0 @@
-$ boundary scopes list -scope-id global   | grep kst
-o_cr9ncHM3kS  kst-devops  actions=no-op
-
-$ whoami (token account)
-
-=== projects under kst-devops (o_cr9ncHM3kS) ===
-p_UMfkhp0pCv  linux  actions=no-op
-
-=== targets in eks-access project (p_UqsGRifciZ) ===

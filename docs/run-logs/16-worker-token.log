@@ -1,7 +1,0 @@
-inactive
-ls: cannot access '/usr/local/bin/worker-auth-token': No such file or directory
-sudo: /usr/local/bin/worker-auth-token: command not found
--- No entries --
-
---- stderr ---
-
