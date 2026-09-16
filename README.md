@@ -137,7 +137,7 @@ trusting this table.
 
 | Item | Value |
 |---|---|
-| AWS region / CLI profile | `ap-southeast-1` / `pegb` |
+| AWS region / CLI profile | `ap-southeast-1` / `hc-lab` |
 | VPC | `10.0.0.0/16` — private `10.0.1-3.0/24`, public `10.0.101-103.0/24` |
 | EKS cluster | `hc-eks-cluster` — Kubernetes 1.35, authentication mode `API`, private endpoint |
 | EKS API endpoint | `6F66E12DC9593ADDD5CA21204650E2DA.gr7.ap-southeast-1.eks.amazonaws.com` (10.0.2.250 / 10.0.1.7) |
@@ -202,7 +202,7 @@ What matters in the result:
 Admin kubeconfig, authenticated by your IAM access entry:
 
 ```bash
-aws eks update-kubeconfig --region ap-southeast-1 --name hc-eks-cluster --profile pegb
+aws eks update-kubeconfig --region ap-southeast-1 --name hc-eks-cluster --profile hc-lab
 kubectl get nodes
 ```
 
@@ -342,7 +342,7 @@ vault status                                            # Sealed: false, Storage
 vault secrets enable -path=kubernetes kubernetes
 
 TOKEN_REVIEW_JWT=$(kubectl create token vault-auth -n kube-system --duration=8760h)
-KUBE_CA=$(aws eks describe-cluster --name hc-eks-cluster --region ap-southeast-1 --profile pegb \
+KUBE_CA=$(aws eks describe-cluster --name hc-eks-cluster --region ap-southeast-1 --profile hc-lab \
   --query 'cluster.certificateAuthority.data' --output text | base64 -d)
 
 vault write kubernetes/config \
@@ -398,7 +398,7 @@ Registration is **worker-led** — no Boundary credentials touch AWS state:
 ```bash
 # 1. read the auth request token off the instance
 aws ssm start-session --target $(terraform -chdir=aws output -raw boundary_worker_instance_id) \
-  --region ap-southeast-1 --profile pegb
+  --region ap-southeast-1 --profile hc-lab
 sudo /usr/local/bin/worker-auth-token
 
 # 2. activate it (from your laptop)
@@ -658,7 +658,7 @@ no way to open a local port, so TCP targets need the CLI or Boundary Desktop.
 # terminal 2
 TOKEN=$(jq -r '.credentials[0].secret.decoded.service_account_token' /tmp/sess.json)
 
-aws eks describe-cluster --name hc-eks-cluster --region ap-southeast-1 --profile pegb \
+aws eks describe-cluster --name hc-eks-cluster --region ap-southeast-1 --profile hc-lab \
   --query 'cluster.certificateAuthority.data' --output text | base64 -d > /tmp/eks-ca.crt
 
 kubectl --server=https://127.0.0.1:8443 \

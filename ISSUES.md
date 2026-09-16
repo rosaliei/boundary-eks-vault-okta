@@ -254,7 +254,7 @@ Drawn as scene 5, linked at the top of this page.
 **Before any further Boundary / Vault change, check:** current Vault NLB
 hostname · every filter is a tag filter · each target has exactly one library ·
 every `authorize-session` grant is pinned to a target id · worker version ≤ HCP
-controller · `--profile pegb`.
+controller · `--profile hc-lab`.
 
 ---
 

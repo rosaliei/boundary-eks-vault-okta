@@ -79,7 +79,7 @@ output "boundary_worker_security_group_recommendation" {
 # Helper output for kubeconfig generation
 output "kubeconfig_command" {
   description = "AWS CLI command to update kubeconfig (requires VPC access)"
-  value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name} --profile pegb"
+  value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name} --profile ${var.aws_profile}"
 }
 
 # -----------------------------------------------------------------------------
@@ -100,7 +100,7 @@ output "boundary_worker_registration" {
   description = "Worker-led registration steps to run after apply"
   value       = <<-EOT
     # 1. Open a shell on the worker (private subnet, SSM only):
-    aws ssm start-session --target ${aws_instance.boundary_worker.id} --region ${var.aws_region} --profile pegb
+    aws ssm start-session --target ${aws_instance.boundary_worker.id} --region ${var.aws_region} --profile ${var.aws_profile}
 
     # 2. On the instance, read the auth request token:
     sudo /usr/local/bin/worker-auth-token

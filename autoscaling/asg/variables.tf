@@ -6,7 +6,7 @@ variable "aws_region" {
 variable "aws_profile" {
   description = "Local CLI profile. GitHub Actions overrides with -var aws_profile=\"\" and uses OIDC credentials."
   type        = string
-  default     = "pegb"
+  default     = "hc-lab"
 }
 
 variable "asg_name" {

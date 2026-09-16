@@ -8,6 +8,12 @@ variable "aws_region" {
   default     = "ap-southeast-1"
 }
 
+variable "aws_profile" {
+  description = "Local AWS CLI profile. Override in terraform.tfvars; CI passes an empty string and uses OIDC credentials."
+  type        = string
+  default     = "hc-lab"
+}
+
 variable "project_name" {
   description = "Project name used for resource naming and tagging"
   type        = string

@@ -214,7 +214,7 @@ Launch a second instance so you can do the registration yourself: ASG →
 **Edit** → desired **2** → Update. When it shows *InService*, connect:
 
 ```bash
-aws ssm start-session --target <the new i-…> --profile pegb
+aws ssm start-session --target <the new i-…> --profile hc-lab
 sudo -i
 systemctl stop boundary-register boundary-worker     # undo what user-data did
 rm -f /etc/boundary/worker_id /etc/boundary/worker.hcl

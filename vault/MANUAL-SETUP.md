@@ -18,7 +18,7 @@ Vault outside the VPC (HCP Vault, laptop) cannot reach that endpoint at all.
 
 ```bash
 # kubectl pointed at the cluster (uses your IAM access entry, not Boundary)
-aws eks update-kubeconfig --region ap-southeast-1 --name hc-eks-cluster --profile pegb
+aws eks update-kubeconfig --region ap-southeast-1 --name hc-eks-cluster --profile hc-lab
 kubectl get nodes
 
 # The ServiceAccounts Vault will mint tokens for must exist FIRST
@@ -233,7 +233,7 @@ TOKEN=$(vault write -field=service_account_token \
 kubectl --server=https://127.0.0.1:PORT \
   --tls-server-name=BB0C8B66351A596AC1A823FDBAF38F90.gr7.ap-southeast-1.eks.amazonaws.com \
   --certificate-authority=<(aws eks describe-cluster --name hc-eks-cluster \
-      --region ap-southeast-1 --profile pegb \
+      --region ap-southeast-1 --profile hc-lab \
       --query 'cluster.certificateAuthority.data' --output text | base64 -d) \
   --token="$TOKEN" \
   -n demo-app get pods

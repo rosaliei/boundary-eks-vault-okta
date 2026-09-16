@@ -15,7 +15,7 @@ terraform {
 
 provider "aws" {
   region  = var.aws_region
-  profile = "pegb"
+  profile = var.aws_profile
 
   default_tags {
     tags = {

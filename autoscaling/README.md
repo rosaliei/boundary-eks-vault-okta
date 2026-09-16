@@ -48,7 +48,7 @@ Tools on your laptop: `terraform`, `packer`, `ansible-core`, `aws`, `vault`,
 ## Step 1 — collect the facts
 
 ```bash
-export AWS_PROFILE=pegb
+export AWS_PROFILE=hc-lab
 export BOUNDARY_ADDR=https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud
 
 aws sts get-caller-identity --query Account --output text        # -> aws_account_id
