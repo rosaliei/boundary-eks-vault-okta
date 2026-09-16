@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="Zero-Trust Kubernetes Access - Okta → HCP Boundary → Vault → private EKS. No kubeconfig, 15-minute credentials.">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b0f16"/><stop offset="0.55" stop-color="#121a27"/><stop offset="1" stop-color="#0f2a22"/></linearGradient>
+    <linearGradient id="rule" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4fc47e"/><stop offset="0.5" stop-color="#e8c04a"/><stop offset="1" stop-color="#a888ee"/></linearGradient>
+    <linearGradient id="hexrule" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4fc47e"/><stop offset="1" stop-color="#a888ee"/></linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#4fc47e" stop-opacity="0.35"/><stop offset="1" stop-color="#4fc47e" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glow2" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#a888ee" stop-opacity="0.22"/><stop offset="1" stop-color="#a888ee" stop-opacity="0"/></radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity="0.04"/></pattern>
+  </defs>
+  <rect width="1280" height="640" fill="url(#bg)"/><rect width="1280" height="640" fill="url(#grid)"/>
+  <ellipse cx="1110" cy="210" rx="300" ry="240" fill="url(#glow)"/><ellipse cx="220" cy="90" rx="420" ry="220" fill="url(#glow2)"/>
+  <g><polygon points="1145.5,179.5 1145.5,220.5 1110.0,241.0 1074.5,220.5 1074.5,179.5 1110.0,159.0" fill="#1f3a2a" stroke="url(#hexrule)" stroke-width="1.6"/><polygon points="1225.2,179.5 1225.2,220.5 1189.7,241.0 1154.2,220.5 1154.2,179.5 1189.7,159.0" fill="#151b27" stroke="#3a4560" stroke-width="1.6"/><polygon points="1185.3,248.5 1185.3,289.5 1149.8,310.0 1114.3,289.5 1114.3,248.5 1149.8,228.0" fill="#151b27" stroke="#3a4560" stroke-width="1.6"/><polygon points="1105.7,248.5 1105.7,289.5 1070.2,310.0 1034.7,289.5 1034.7,248.5 1070.2,228.0" fill="#151b27" stroke="#3a4560" stroke-width="1.6"/><polygon points="1065.8,179.5 1065.8,220.5 1030.3,241.0 994.8,220.5 994.8,179.5 1030.3,159.0" fill="#151b27" stroke="#3a4560" stroke-width="1.6"/><polygon points="1105.7,110.5 1105.7,151.5 1070.2,172.0 1034.7,151.5 1034.7,110.5 1070.2,90.0" fill="#151b27" stroke="#3a4560" stroke-width="1.6"/><polygon points="1185.3,110.5 1185.3,151.5 1149.8,172.0 1114.3,151.5 1114.3,110.5 1149.8,90.0" fill="#151b27" stroke="#3a4560" stroke-width="1.6"/><line x1="1110" y1="200" x2="1153.8" y2="200.0" stroke="#4fc47e" stroke-width="1.3" opacity="0.55"/><circle cx="1189.7" cy="200.0" r="3.5" fill="#e7eaf1" opacity="0.9"/><line x1="1110" y1="200" x2="1131.9" y2="237.9" stroke="#4fc47e" stroke-width="1.3" opacity="0.55"/><circle cx="1149.8" cy="269.0" r="3.5" fill="#e7eaf1" opacity="0.9"/><line x1="1110" y1="200" x2="1088.1" y2="238.0" stroke="#4fc47e" stroke-width="1.3" opacity="0.55"/><circle cx="1070.2" cy="269.0" r="3.5" fill="#e7eaf1" opacity="0.9"/><line x1="1110" y1="200" x2="1066.2" y2="200.0" stroke="#4fc47e" stroke-width="1.3" opacity="0.55"/><circle cx="1030.3" cy="200.0" r="3.5" fill="#e7eaf1" opacity="0.9"/><line x1="1110" y1="200" x2="1088.1" y2="162.1" stroke="#4fc47e" stroke-width="1.3" opacity="0.55"/><circle cx="1070.2" cy="131.0" r="3.5" fill="#e7eaf1" opacity="0.9"/><line x1="1110" y1="200" x2="1131.9" y2="162.1" stroke="#4fc47e" stroke-width="1.3" opacity="0.55"/><circle cx="1149.8" cy="131.0" r="3.5" fill="#e7eaf1" opacity="0.9"/><circle cx="1110" cy="200" r="7" fill="#4fc47e"/><circle cx="1110" cy="200" r="14" fill="none" stroke="#4fc47e" stroke-opacity="0.5"/></g>
+  <g font-family="Helvetica, Arial, 'DejaVu Sans', 'Liberation Sans', sans-serif">
+    <text x="80" y="150" fill="#4fc47e" font-size="18" letter-spacing="4">KYAW SITHU  &#183;  PLATFORM ENGINEERING</text>
+    <text x="80" y="250" fill="#ffffff" font-size="64" font-weight="700">Zero-Trust</text>
+    <text x="80" y="326" fill="#ffffff" font-size="64" font-weight="700">Kubernetes Access</text>
+    <rect x="80" y="352" width="240" height="4" rx="2" fill="url(#rule)"/>
+    <text x="80" y="410" fill="#e7eaf1" font-size="27">Okta → HCP Boundary → Vault → private EKS. No kubeconfig,</text><text x="80" y="446" fill="#e7eaf1" font-size="27">15-minute credentials.</text>
+    <text x="80" y="500" fill="#8b95ab" font-size="19" letter-spacing="1">ZERO TRUST  ·  PAM  ·  SECRETS MANAGEMENT  ·  LEAST PRIVILEGE  ·  TERRAFORM  ·  GITHUB ACTIONS</text>
+  </g>
+  <g font-family="Menlo, Consolas, 'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="17">
+    <rect x="80" y="540" width="210" height="38" rx="19" fill="#0b0f16" stroke="#3a4560"/>
+    <text x="185" y="565" text-anchor="middle" fill="#4fc47e" textLength="150" lengthAdjust="spacingAndGlyphs">kst-devops.com</text>
+    <text x="1200" y="565" text-anchor="end" fill="#5c6578">github.com/rosaliei/boundary-eks-vault-okta</text>
+  </g>
+</svg>
