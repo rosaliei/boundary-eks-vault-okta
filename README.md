@@ -1,25 +1,75 @@
-# EKS Access via Okta → Boundary → Vault
+# Zero-Trust Kubernetes Access
 
-Short-lived, RBAC-scoped Kubernetes access to a **private** EKS endpoint. No
-kubeconfig handed out, no long-lived credentials, no public API surface.
-
-This README is the **manual runbook** — every step done by hand, in the order
-that works. Terraform for each layer lives in `aws/`, `vault/` and
-`boundary/` and can replace these steps once the flow is understood.
-
-New here? Go to [**Start here — the five scenes**](#start-here--the-five-scenes)
-first. Each one has a *Manual* half and an *Automation* half; do them in order.
+**Okta · HCP Boundary · HashiCorp Vault · Amazon EKS**
+Identity-driven, short-lived, RBAC-scoped access to a **private** Kubernetes API —
+with no kubeconfig distributed, no long-lived credential anywhere, and no
+inbound network path from the internet.
 
 ---
 
-## The two tokens (read this first)
+## 1. The problem
+
+Teams that run Kubernetes on a private endpoint usually solve access with one of
+three things: a VPN, a bastion host, or a kubeconfig file handed to every
+engineer. Each one ends the same way — a long-lived credential on a laptop, an
+inbound door in the network, and no reliable answer to *who did what, and were
+they still allowed to at the time?*
+
+The requirements here were stricter:
+
+| Requirement | Meaning in practice |
+|---|---|
+| **Identity is the perimeter** | access is granted to a person in an Okta group, never to a file or an IP |
+| **Credentials expire by default** | every Kubernetes token lives 15 minutes and is minted per session |
+| **Least privilege is enforced, not requested** | the tier you get (viewer / operator / admin) is decided by your group — you cannot ask for more |
+| **No inbound surface** | the EKS endpoint stays private; nothing in the VPC accepts a connection from outside |
+| **Auditable** | every session is authorized by a control plane and recorded, with the identity attached |
+| **Elastic** | access capacity grows and shrinks with demand, with zero human steps |
+
+## 2. The solution
+
+Each capability is delivered by a purpose-built technology, chosen for the job
+it does rather than the tool it is:
+
+| Capability | Technology | Role in this design |
+|---|---|---|
+| Identity provider (IdP) | **Okta** | authenticates the human; issues an ID token carrying the `groups` claim that drives every downstream decision |
+| Privileged Access Management (PAM) | **HCP Boundary** | the policy enforcement point: maps Okta groups → roles → targets, authorizes each session, brokers the credential, proxies the connection through a worker inside the VPC |
+| Secrets management & dynamic credentials | **HashiCorp Vault** (Kubernetes secrets engine) | mints a 15-minute ServiceAccount token per session, bound to a named RBAC tier; Boundary fetches it so the user never touches Vault |
+| Workload platform | **Amazon EKS** (private endpoint, access-entries auth) | the protected system; Kubernetes RBAC bounds what each tier may do |
+| Network isolation | **AWS VPC**, private subnets, NAT-only egress | the worker dials *out* to Boundary; nothing dials in |
+| Infrastructure as code | **Terraform** | one root per layer: `aws/`, `vault/`, `boundary/`, `autoscaling/` |
+| Image build & configuration | **Packer + Ansible** | immutable worker AMI; instance-specific facts arrive at boot |
+| Observability & scaling signal | **Datadog** | active-session metric, monitors, dashboard; the source of truth for scale decisions |
+| Delivery & automation | **GitHub Actions** (OIDC to AWS, no static keys) | AMI builds, infrastructure apply, scale actuation, credential rotation |
+
+## 3. Outcomes
+
+- **Zero standing access.** No kubeconfig on any laptop. The only long-lived
+  identity in the chain is the person's Okta account.
+- **One command, one session, one credential.** `boundary connect` opens the
+  tunnel *and* returns the 15-minute token for the caller's tier.
+- **Tiering is structural.** One Boundary target per tier, one Vault credential
+  library per target, one Kubernetes RBAC Role per ServiceAccount. A viewer
+  cannot be handed an admin token because no path exists for it.
+- **Private stays private.** The EKS API is never exposed; the Boundary worker
+  holds a reverse tunnel out to the control plane.
+- **Elastic access layer.** Workers on an Auto Scaling Group register and
+  deregister themselves, driven by Datadog session counts through GitHub Actions
+  — see [`autoscaling/`](autoscaling/).
+
+## 4. Architecture
+
+![End-to-end access flow: Okta to Boundary to Vault to a private EKS API](docs/e2e-flow.svg)
+
+### The two tokens
 
 Almost every confusion in this stack comes from conflating them:
 
 | | Okta ID token | Kubernetes ServiceAccount token |
 |---|---|---|
-| Issued by | Okta | The EKS API server |
-| `iss` | `https://trial-9050012.okta.com` | `https://oidc.eks.<region>.amazonaws.com/id/<id>` |
+| Issued by | Okta | The EKS API server (via Vault) |
+| `iss` | `https://<org>.okta.com` | `https://oidc.eks.<region>.amazonaws.com/id/<id>` |
 | `sub` | your Okta user id | `system:serviceaccount:demo-app:vault-viewer` |
 | Proves identity to | **Boundary** | **Kubernetes** |
 | Lifetime | Okta session | 15 minutes |
@@ -28,53 +78,6 @@ Boundary decides *whether you may reach the cluster's API port*.
 Kubernetes RBAC decides *what you may do once you are there*.
 They are independent — a Boundary admin holding a viewer SA token still cannot
 write to the cluster.
-
-## Flow, end to end
-
-![End-to-end access flow: Okta to Boundary to Vault to a private EKS API](docs/e2e-flow.svg)
-
-<details>
-<summary>Text version</summary>
-
-```
- you ──▶ Okta                    authenticate the human
-         │  ID token (groups claim)
-         ▼
-      Boundary                   managed group → role → authorize-session
-         │  session
-         ▼
-   self-managed worker           the only thing with line of sight to the
-   (EC2, private subnet)         private EKS endpoint
-         │
-         ▼                       127.0.0.1:8443 on your laptop
-   EKS API :443  ◀── kubectl --token=<SA token>
-                          ▲
-                          │  15-min ServiceAccount token
-                       Vault kubernetes secrets engine
-                          │
-                       k8s RBAC (Role + RoleBinding) bounds it
-```
-
-</details>
-
-### Who authenticates to whom
-
-![Authentication map: every credential in the chain and the identity it produces](docs/auth-map.svg)
-
-The worker is the one people assume authenticates to the cluster. It does not —
-it proves itself to *Boundary* with PKI node credentials, and Boundary decides
-whether to open a pipe. TLS runs end to end between kubectl and the EKS API, so
-the worker cannot read what passes through it. That is why kubectl needs
-`--tls-server-name` and the EKS CA rather than trusting the proxy.
-
-Vault authenticates to EKS separately, as
-`system:serviceaccount:kube-system:vault-auth`, and its only power is minting
-short-lived tokens for three named ServiceAccounts.
-
-Build order matters: **EKS → k8s RBAC → Vault → worker → Okta → Boundary**.
-Each layer references names created by the one before it.
-
----
 
 ### Traffic flow
 
@@ -90,13 +93,24 @@ TLS is end to end between kubectl and the EKS API — every hop in between relay
 ciphertext it cannot read. Hence `--tls-server-name` and the cluster CA on the
 kubectl command: you dial `127.0.0.1`, but you validate the EKS certificate.
 
+Build order matters: **EKS → Kubernetes RBAC → Vault → worker → Okta → Boundary**.
+Each layer references names created by the one before it.
+
+---
+
 ## Start here — the five scenes
 
-**Steps 1–5 are the foundation. They are very important and they build on each
-other — do not skip one, do not reorder.** Each scene is a drawing in the
-*platform-engineering* Excalidraw collection. For every step: **Manual** is what
-you do by hand (console, UI, CLI) to understand it; **Automation** is the code
-in this repo that does the same thing once you do.
+AI can generate every file in this repository in minutes. What it cannot do is
+understand the system for me — and understanding is the thing an operator is
+actually paid for at 3 a.m. So I built this the slow way first: **every layer by
+hand in the console and the UI (ClickOps), until I could draw it from memory,
+and only then automated it.** Every picture below is my own work, drawn in
+Excalidraw as I went. The code is the *output* of that understanding, not a
+substitute for it.
+
+**Scenes 1–5 are the foundation. They build on each other — do them in order.**
+For every scene: **Manual** is what you do by hand to understand it;
+**Automation** is the code in this repo that does the same thing once you do.
 
 | # | Scene (open the drawing) | What it settles | Manual | Automation |
 |---|---|---|---|---|
@@ -104,83 +118,61 @@ in this repo that does the same thing once you do.
 | **2** | [EKS — detailed analysis](https://app.excalidraw.com/s/9hD7S5FgGWN/2XoNL6sXrLz) | private endpoint, access-entries auth, node group, the RBAC tiers (SA → RoleBinding → Role) | console: create cluster (private only), node group, access entry for your IAM user; then `kubectl apply -f k8s/rbac.yaml` — [Step 1](#step-1--eks-cluster), [Step 2](#step-2--kubernetes-rbac) | [`aws/eks.tf`](aws/eks.tf), [`k8s/rbac.yaml`](k8s/rbac.yaml) |
 | **3** | [Boundary ↔ Okta identity](https://app.excalidraw.com/s/9hD7S5FgGWN/7rGrKHxR5PL) | Okta app + groups claim → OIDC auth method → managed groups → roles → grants | Okta admin + Boundary UI — [Step 5](#step-5--okta), [Step 6](#step-6--boundary), [`boundary/MANUAL-SETUP.md`](boundary/MANUAL-SETUP.md) | [`boundary/main.tf`](boundary/main.tf) (managed groups, roles, host catalog, targets) |
 | **4** | [Boundary → Okta → Vault → EKS RBAC](https://app.excalidraw.com/s/9hD7S5FgGWN/2didKmVk95t) | the whole runtime path: worker in the VPC, Vault k8s secrets engine, credential brokering, one target per tier, the numbered 1–8 flow | [Step 3](#step-3--vault), [Step 4](#step-4--boundary-worker), [Step 7](#step-7--vault-credential-brokering), [Step 8](#step-8--end-to-end), [`vault/MANUAL-SETUP.md`](vault/MANUAL-SETUP.md) | [`aws/boundary-worker.tf`](aws/boundary-worker.tf), [`vault/main.tf`](vault/main.tf), [`boundary/credentials.tf`](boundary/credentials.tf) |
-| **5** | [Issues — what broke and why](https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P) | the 12 failures from the real build, their causes, the checklist, and why the autoscaling design looks the way it does | run the checklist in [State before autoscaling](#state-before-autoscaling-2026-09-15); then [`autoscaling/MANUAL-WALKTHROUGH.md`](autoscaling/MANUAL-WALKTHROUGH.md) parts A–G by hand | [`autoscaling/README.md`](autoscaling/README.md) — Terraform + Packer/Ansible + GitHub Actions |
+| **5** | [Issues — what broke and why](https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P) | the 12 failures from the real build, their causes, the checklist, and why the autoscaling design looks the way it does | run the checklist, then [`autoscaling/MANUAL-WALKTHROUGH.md`](autoscaling/MANUAL-WALKTHROUGH.md) parts A–G by hand | [`autoscaling/README.md`](autoscaling/README.md) — Terraform + Packer/Ansible + GitHub Actions |
 
-Rule of thumb for each step: **do the Manual column once, watch it work, then
+Rule of thumb for each scene: **do the Manual column once, watch it work, then
 apply the Automation column and confirm it produces the same objects.** If the
 two differ, the drawing is the truth and the code has drifted.
 
-### Supporting boards
-
-Older working boards in the *hellocloud* collection — useful detail, not part
-of the path above.
-
-| Board | What it shows |
-|---|---|
-| [Architecture — detailed](https://app.excalidraw.com/s/9hD7S5FgGWN/6qkBs97pPLA) | high level, the Vault credential pipeline, traffic flow, the two tokens, build order |
-| [Manual runbook](https://app.excalidraw.com/s/9hD7S5FgGWN/6nhIbrWDS4R) | all 9 build steps as command cards, plus captured output from a real run |
-| [Step 7 — Boundary build evidence](https://app.excalidraw.com/s/9hD7S5FgGWN/5A6xg4Owie) | CLI output from building the Boundary side, and where steps 8/9 stand |
-| [Scratch / working notes](https://app.excalidraw.com/s/9hD7S5FgGWN/4WYkgQqBXUp) | original console walkthrough and annotations |
-
-### Editable sources in the repo
-
-Committed `.excalidraw` files — open at [excalidraw.com](https://excalidraw.com)
-via *File → Open*:
-
-| File | What it shows |
-|---|---|
-| [docs/architecture.excalidraw](docs/architecture.excalidraw) | the whole system, with the numbered runtime flow |
-| [docs/setup-steps.excalidraw](docs/setup-steps.excalidraw) | all 8 build steps, each with the trap that bites in it |
-| [docs/command-walkthrough.excalidraw](docs/command-walkthrough.excalidraw) | steps 3–8 as command cards |
-
-Terminal captures from the real build live in `docs/run-logs/` on the build
-machine only (gitignored).
+---
 
 ## Reference values
 
-Replace with your own. **Everything except the region, cluster name, Boundary
-cluster and Okta auth method is regenerated on every rebuild** — the API
-endpoint, all `ttcp_` target ids, the project id, the worker id and the Vault
-NLB hostname all change. Re-read them from `terraform output` and
-`boundary targets list` rather than trusting this block.
+Live environment as of **2026-09-15**. Everything except the region, cluster
+name, Boundary cluster and Okta auth method is regenerated on a rebuild —
+re-read ids from `terraform output` and `boundary targets list` rather than
+trusting this table.
 
-Values below are from the live state on 2026-09-15 (after the target split —
-see "State before autoscaling" near the end).
+### Platform
 
-```
-Region / profile   ap-southeast-1 / pegb        (the `default` profile is expired - always pass pegb)
-Cluster            hc-eks-cluster  (k8s 1.35, auth mode API)
-API endpoint       6F66E12DC9593ADDD5CA21204650E2DA.gr7.ap-southeast-1.eks.amazonaws.com
-                   private 10.0.2.250 / 10.0.1.7
-VPC                10.0.0.0/16   private 10.0.1-3.0/24   public 10.0.101-103.0/24
-Boundary           https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud
-Org / project      o_cr9ncHM3kS (kst-devops) / p_UMfkhp0pCv (linux)   <- built by hand; boundary/ Terraform still says eks-access
-Global pw auth     ampw_WNbi76VghW
-Worker             kst-eks-ap-southeast-1-worker-01
-                   w_K3RyLndlV4   tags type=[eks, vpc, private, k8s_vault]   Boundary v1.0.1+ent
-Okta auth method   amoidc_eY8ldrT0GG (HC OKTA)  client 0oa174q3bo5aaqXHr698
-Vault (internal)   http://aa837cd050a9d43028df5e6987267f93-d3fb677640c1fdfb.elb.ap-southeast-1.amazonaws.com:8200
-                   (changes every time the Service is recreated - read it with
-                    kubectl -n vault get svc vault -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-Credential store   csvlt_xEcOfrT5Sx   worker_filter "eks" in "/tags/type"
+| Item | Value |
+|---|---|
+| AWS region / CLI profile | `ap-southeast-1` / `pegb` |
+| VPC | `10.0.0.0/16` — private `10.0.1-3.0/24`, public `10.0.101-103.0/24` |
+| EKS cluster | `hc-eks-cluster` — Kubernetes 1.35, authentication mode `API`, private endpoint |
+| EKS API endpoint | `6F66E12DC9593ADDD5CA21204650E2DA.gr7.ap-southeast-1.eks.amazonaws.com` (10.0.2.250 / 10.0.1.7) |
+| Vault (internal NLB) | `http://aa837cd050a9d43028df5e6987267f93-d3fb677640c1fdfb.elb.ap-southeast-1.amazonaws.com:8200` — changes when the Service is recreated; read with `kubectl -n vault get svc vault -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'` |
 
-Targets, one per tier - each brokers exactly ONE Vault credential:
-  eks-api-viewer     ttcp_d9cw5TgQOO    ->  clvlt_fC94KKXa3Z  ->  kubernetes/creds/viewer
-  eks-api-operator   ttcp_jeFYI2LB06    ->  clvlt_xK10mY4Mol  ->  kubernetes/creds/operator
-  eks-api-admin      ttcp_oZ4UOSIoXm    ->  clvlt_YwAqiKc1TJ  ->  kubernetes/creds/admin
-  egress_worker_filter on all three:  "k8s_vault" in "/tags/type"
+### HCP Boundary
 
-Managed groups on the Okta auth method:
-  viewers   mgoidc_bS1PpJhm0i      operators mgoidc_ZKiUHEKsPZ
-  admins    mgoidc_EzvkGq9PYp
+| Item | Value |
+|---|---|
+| Cluster | `https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud` |
+| Org / project | `o_cr9ncHM3kS` (kst-devops) / `p_UMfkhp0pCv` (linux) |
+| Global password auth method | `ampw_WNbi76VghW` |
+| Okta OIDC auth method | `amoidc_eY8ldrT0GG` (HC OKTA) — client `0oa174q3bo5aaqXHr698` |
+| Self-managed worker | `kst-eks-ap-southeast-1-worker-01` — `w_K3RyLndlV4`, v1.0.1+ent, tags `type=[eks, vpc, private, k8s_vault]` |
+| Vault credential store | `csvlt_xEcOfrT5Sx` — `worker_filter "eks" in "/tags/type"` |
 
-Roles (org level, grant scope this + the project):
-  viewers  r_7dhKthDv6h  ids=ttcp_d9cw5TgQOO;type=target;actions=list,no-op,authorize-session
-  operator r_ONl6HaVG9B  ids=ttcp_jeFYI2LB06;type=target;actions=list,no-op,read,authorize-session
-  admin    r_s4rOl3yCNN  ids=*;type=target;actions=*
-```
+### Access tiers — one target, one credential, one RBAC role each
+
+| Tier | Okta group → managed group | Boundary role | Target | Credential library | Vault path → ServiceAccount |
+|---|---|---|---|---|---|
+| viewer | `eks-viewers` → `mgoidc_bS1PpJhm0i` | `r_7dhKthDv6h` | `eks-api-viewer` `ttcp_d9cw5TgQOO` | `clvlt_fC94KKXa3Z` | `kubernetes/creds/viewer` → `vault-viewer` |
+| operator | `eks-operators` → `mgoidc_ZKiUHEKsPZ` | `r_ONl6HaVG9B` | `eks-api-operator` `ttcp_jeFYI2LB06` | `clvlt_xK10mY4Mol` | `kubernetes/creds/operator` → `vault-operator` |
+| admin | `eks-admins` → `mgoidc_EzvkGq9PYp` | `r_s4rOl3yCNN` | `eks-api-admin` `ttcp_oZ4UOSIoXm` | `clvlt_YwAqiKc1TJ` | `kubernetes/creds/admin` → `vault-admin` |
+
+Grants are pinned per tier — e.g. viewer:
+`ids=ttcp_d9cw5TgQOO;type=target;actions=list,no-op,authorize-session`.
+All targets: `egress_worker_filter "k8s_vault" in "/tags/type"`.
 
 ---
+
+# Build runbook
+
+Every step below was done by hand first. The **Manual** / **Automation**
+callout at the top of each step says which scene it belongs to and which file
+automates it.
 
 # Step 1 — EKS cluster
 
@@ -405,7 +397,7 @@ Registration is **worker-led** — no Boundary credentials touch AWS state:
 
 ```bash
 # 1. read the auth request token off the instance
-aws ssm start-session --target $(terraform -chdir=terraform output -raw boundary_worker_instance_id) \
+aws ssm start-session --target $(terraform -chdir=aws output -raw boundary_worker_instance_id) \
   --region ap-southeast-1 --profile pegb
 sudo /usr/local/bin/worker-auth-token
 
@@ -636,8 +628,8 @@ tiering is enforced**: the credential you receive is decided by which target
 your role lets you authorize, not by anything you type.
 
 ```
-viewer   role -> ids=ttcp_QL8eAjhITq ; authorize-session
-operator role -> ids=ttcp_pOHfiqkgLC ; authorize-session
+viewer   role -> ids=ttcp_d9cw5TgQOO ; authorize-session
+operator role -> ids=ttcp_jeFYI2LB06 ; authorize-session
 ```
 
 A wildcard (`ids=*`) here is a privilege escalation: a viewer could authorize
@@ -647,7 +639,7 @@ A wildcard (`ids=*`) here is a privilege escalation: a viewer could authorize
 
 # Step 8 — End to end
 
-> **Scene [4](https://app.excalidraw.com/s/9hD7S5FgGWN/2didKmVk95t) → [5](https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P)** · **Manual:** two terminals below; then run the checklist in [State before autoscaling](#state-before-autoscaling-2026-09-15)
+> **Scene [4](https://app.excalidraw.com/s/9hD7S5FgGWN/2didKmVk95t) → [5](https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P)** · **Manual:** two terminals below; then run the checklist in [ISSUES.md](ISSUES.md#state-before-autoscaling-2026-09-15)
 > **Automation:** [`autoscaling/scripts/loadtest.sh`](autoscaling/scripts/loadtest.sh) opens N sessions; [`autoscaling/README.md`](autoscaling/README.md) takes it from here
 
 ```bash
@@ -655,7 +647,7 @@ export BOUNDARY_ADDR=https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashi
 boundary authenticate oidc -auth-method-id=amoidc_eY8ldrT0GG
 
 # terminal 1 - session AND credential, in one command
-boundary connect -target-id=ttcp_QL8eAjhITq -listen-port=8443 -format=json > /tmp/sess.json
+boundary connect -target-id=ttcp_d9cw5TgQOO -listen-port=8443 -format=json > /tmp/sess.json
 ```
 
 `8443` is the port on **your laptop**; `443` is what the worker dials at the far
@@ -687,282 +679,25 @@ Measured with `kubectl auth can-i` through each tier's own session:
 | operator | yes | yes | yes | yes | no |
 | admin | yes | yes | yes | yes | no |
 
-Note `viewer` can read Secrets — see Security notes.
-
-# Problems found on the 2026-09-10/12 rebuild
-
-Everything in this section was hit, measured and fixed on a live rebuild.
-
-**Vault's own credential expires after ~24 hours, and the error blames the wrong
-ServiceAccount.** Step 3d originally ran
-`kubectl create token vault-auth --duration=8760h`. The API server silently caps
-that — **measured on EKS: requested 8760h, granted exactly 24.0h**. A day later
-every credential request fails with
-`failed to create a service account token for demo-app/vault-viewer: Unauthorized`,
-which points at `demo-app/vault-viewer` while the dead credential is
-`kube-system/vault-auth`. You cannot raise the cap: it comes from the API
-server's `--service-account-max-token-expiration`, and on EKS the control plane
-is managed. There is a standing request for it in
-[aws/containers-roadmap#1836](https://github.com/aws/containers-roadmap/issues/1836).
-Fixed by using a `kubernetes.io/service-account-token` Secret, whose token has
-no `exp` claim at all — see step 3b.
-
-**The unscoped token-creator grant was a privilege-escalation path.** `create` on
-`serviceaccounts/token` with no `resourceNames` lets Vault mint a token for any
-ServiceAccount in the cluster, including any bound to `cluster-admin`. The 24h
-expiry was masking it; attaching a non-expiring token would have made it
-permanent. Verified after scoping: minting `vault-viewer` succeeds, minting
-`default` returns `serviceaccounts "default" is forbidden`.
-
-**Vault ignores its own auto-rotating credential.** `disable_local_ca_jwt=true`
-means "do not read the pod's mounted token". Vault runs *in* this cluster, so it
-already has a projected token the kubelet rotates forever — and the external
-recipe tells it to ignore that and use a pasted one instead. If Vault is
-in-cluster, bind the Role to the Vault pod's ServiceAccount and run
-`vault write -f kubernetes/config` with no arguments.
-
-**`service_account_jwt` does not have to be a ServiceAccount JWT.** Tested: an
-IAM token from `aws eks get-token` — a presigned STS URL, not a JWT — works
-fine. Vault sends whatever string it holds as a bearer token and lets the API
-server decide. The field name is misleading.
-
-**`kubectl -n vault rollout status statefulset/vault` fails.** The Vault chart's
-StatefulSet uses `OnDelete`, so the command errors with
-`rollout status is only available for RollingUpdate strategy type`. Use
-`kubectl -n vault wait --for=condition=Ready pod/vault-0 --timeout=180s`.
-
-**The Boundary worker never installed — two stacked causes.** First,
-`Error: GPG check FAILED`: the HashiCorp repo's `gpgkey` endpoint serves
-`CA026560` while the `boundary-enterprise` RPM is signed with the retired
-`a621e701`. Under `set -euxo pipefail` that aborts the whole cloud-init, leaving
-no binary, no `worker.hcl`, no unit file. Replaced with a pinned release archive
-verified by SHA256. Second, a worker newer than its controller cannot enrol —
-`1.0.2+ent` against a `1.0.1` controller fails with
-`(nodeenrollment.registration.validateFetchRequest) empty nonce` and
-`remote error: tls: internal error`. Both are now variables
-(`boundary_version`, `boundary_sha256`) in `aws/variables.tf`.
-
-**An egress worker filter alone is not enough — multi-hop is required.** The
-client must reach *some* worker, and a self-managed worker in a private subnet
-advertises `0.0.0.0:9202` with no public IP. Sessions sit in `pending` and
-kubectl dies with `net/http: TLS handshake timeout`. Adding an ingress filter
-selecting the HCP-managed workers fixed it immediately:
-
-```
-egress_worker_filter  = "/name" == "kst-eks-ap-southeast-1-worker-01"
-ingress_worker_filter = "/name" matches "hcp-managed-worker.*"
-```
-
-**Worker filters are top-level target fields, not under `.attributes`.** Reading
-`.item.attributes.egress_worker_filter` returns nothing and makes a correctly
-configured target look unconfigured. They live at `.item.egress_worker_filter`.
-`worker_info` in an `authorize-session` response is likewise not populated by
-this version — do not diagnose from its emptiness.
-
-**`-vault-token env://VAR` is not resolved by the Boundary CLI.** Creating a
-Vault credential store with it sends the literal string `env://VAR`, and Vault
-answers `403 permission denied / invalid token`. Only `-token` supports that
-indirection. Pass the value.
-
-**Okta trial orgs cannot issue machine-to-machine tokens.** The
-`client_credentials` grant is gated behind Okta's **NHI Authentication Tokens**
-SKU. The grant simply never appears in the access-policy rule UI, which looks
-like a configuration mistake and is not. One request settles it before you build
-anything around it:
-
-```bash
-curl -s https://<org>.okta.com/oauth2/<authServerId>/.well-known/openid-configuration \
-  | jq -r '.grant_types_supported'
-# no "client_credentials" -> the SKU is not enabled; the path is closed
-```
-
-**The admin `/32` breaks whenever your ISP rotates you.** `admin_public_cidrs`
-pinned to an old address locks `kubectl` out entirely, and every symptom looks
-like a cluster fault. Check `curl https://checkip.amazonaws.com` against
-`aws eks describe-cluster --query 'cluster.resourcesVpcConfig.publicAccessCidrs'`
-before debugging anything else.
-
-# Problems along the way
-
-Every one of these was hit while building this. They are recorded because none
-of them announced itself clearly, and several cost hours.
-
-## AWS / EKS
-
-**`unsupported Kubernetes version 1.29`**
-AWS refuses to *create* a cluster on a version past end-of-life. 1.29 and 1.30
-are already rejected. `aws eks describe-cluster-versions` lists what is
-creatable; anything in EXTENDED_SUPPORT also bills at a premium.
-
-**`expected length of name_prefix to be in the range (1 - 38)`**
-The EKS module derives the node IAM role from `"<node group name>-eks-node-group-"`,
-which overran AWS's 38-char cap. Fixed with an explicit `iam_role_name` and
-`iam_role_use_name_prefix = false`.
-
-**AL2 AMIs do not exist for EKS 1.33+.** The module leaves `ami_type` unset and
-AWS's default would have failed. Pinned to `AL2023_x86_64_STANDARD`.
-
-## Boundary worker
-
-**Worker crash-looped:** `Worker config cannot contain name or description when
-using activation-token-based worker authentication`. With `hcp_boundary_cluster_id`,
-the name must come from the API at registration (`-name=`), not from `worker.hcl`.
-
-**`No egress workers can handle this session, as they have all been filtered out`**
-The target's `egress_worker_filter` said `eks-vpc-worker`; the worker had
-actually registered as `kst-eks-ap-southeast-1-worker-01`. The filter must match
-the **registered** name exactly. This blocks every session while looking like a
-network problem.
-
-## Vault
-
-**Credentials 403 with `cannot create resource "serviceaccounts/token"`.**
-The Helm chart binds Vault to `system:auth-delegator`, which grants
-`tokenreviews` and `subjectaccessreviews` — the ability to *validate* tokens.
-The Kubernetes secrets engine *mints* them via the TokenRequest API and needs
-`create` on `serviceaccounts/token`. Configuration succeeds either way; only
-credential issuance fails. See step 3b.
-
-**`kubectl auth can-i create serviceaccounts/token --as=...` reports `no` even
-when the permission is granted.** It mis-evaluates subresources under
-impersonation. Test the real operation instead.
-
-**Revoking a Vault lease does not invalidate the token.** Verified: revoke the
-lease, the token still works until its `exp`. Because EKS signs the token and it
-is bound to no object, nothing can call it back. Vault's lease is bookkeeping.
-`kubernetes_role_name` / `generated_role_rules` mode makes revocation real, at
-the cost of Vault needing create/delete on ServiceAccounts and RoleBindings.
-
-**`helm upgrade` failed with `cannot unmarshal bool into ... annotations of type
-string`.** Kubernetes annotations must be strings; `--set` parsed `true` as a
-boolean. Use `--set-string`. The upgrade silently never happened — `helm history`
-showed only revision 1 while the Service stayed ClusterIP.
-
-## Okta — six failed attempts at one claim
-
-This consumed more time than everything else combined. In order:
-
-1. **Groups claim missing entirely.** `claims_scopes` did not request `groups`,
-   so no claim arrived and every managed group matched nobody.
-2. **`invalid_scope`.** After switching to the custom authorization server,
-   requesting `groups` failed — custom servers have no built-in `groups` scope.
-3. **`Policy evaluation failed`.** Custom authorization servers deny by default;
-   they need an Access Policy permitting the client. The org server does not.
-4. **`'groups' is reserved and cannot be used.`** On the org server `groups` is a
-   reserved scope, so a *custom* claim cannot be named `groups` — the reason the
-   two server types need opposite configurations.
-5. **Thin ID tokens.** Okta's docs note the authorization-code flow may return
-   groups only via `/userinfo`. Filters were widened to accept either
-   (`"x" in "/token/groups" or "x" in "/userinfo/groups"`).
-6. **The actual bug:** the app's Group claim filter was `Starts with` with value
-   `eks-.*`. "Starts with" is a *literal* prefix match, so it looked for groups
-   whose names begin with the characters `eks-.*`. Nothing matched, and **Okta
-   omits the claim entirely rather than sending an empty array** — so every
-   probe came back identical to "not configured at all". Changing the operator to
-   `Matches regex`, or the value to `eks-`, fixed it immediately.
-
-**Debugging technique that finally worked:** create throwaway managed groups with
-filters that *must* match — `"/token/email" == "you@example.com"`, then
-`"/token/groups" is not empty` and the same for `/userinfo`. One login then
-distinguishes "claims are not arriving" from "claims arrive but values differ".
-Without this, every failure looks the same.
-
-## Boundary authorization
-
-**Targets visible to everyone.** Two roles grant `type=target;actions=list` to
-`u_auth` (every authenticated user): the project's auto-created `Default Grants`,
-and a global `Authenticated User Grants`. Users saw all targets regardless of
-role and only failed at connect. Listing and `authorize-session` are separate
-grants — the second is the real control.
-
-**Privilege escalation via `ids=*`.** The tier roles granted
-`ids=*;type=target;actions=authorize-session`, so a viewer could authorize
-`eks-api-admin` and receive an admin credential. Grants must name the specific
-target ID.
-
-**Managed group membership is evaluated at login, never synced.** Every Okta
-change needs a full logout — a cached Okta session reissues the old claims and
-nothing appears to change.
-
-## Operational
-
-**Terraform state holds live secrets.** `boundary/terraform.tfstate` contains the
-Vault broker token in cleartext. State is gitignored; treat it as a credential.
-
-**A shared Boundary cluster is not isolated by default.** This org sits alongside
-34 others, and global-scope roles from other people's setups can carry
-`ids=*;type=target` grants. Project isolation depends on roles outside the project.
+Note `viewer` can read Secrets — see [Security posture](#security-posture-and-roadmap).
 
 ---
 
-# State before autoscaling (2026-09-15)
+# Lessons learned
 
-What was found and fixed live, one session before the autoscaling work.
-Drawn in Excalidraw as *hellocloud → "Issues before autoscaling"*.
+None of this worked the first time, and the failures are the most valuable part
+of the record. They are kept in two places rather than here:
 
-**Fixed live in Boundary (not yet reflected in `boundary/*.tf`):**
+- **The drawing:** [Issues — what broke and why](https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P)
+  — twelve failures on one board, each with *seen / cause / fix*, the pre-change
+  checklist, and the line from each failure to the design decision it forced.
+- **The written log:** [ISSUES.md](ISSUES.md) — the full narrative:
+  the 24-hour token cap on EKS, the privilege-escalation path in an unscoped
+  TokenRequest grant, six attempts at one Okta claim, the GPG-key mismatch,
+  the state of the environment before autoscaling, and a symptom → cause
+  troubleshooting table.
 
-- The single target `eks-api` carried **all three** credential libraries, so
-  every authorized session returned viewer + operator + admin tokens. Split
-  into `eks-api-viewer` / `-operator` / `-admin` (ids in the reference block),
-  one library each. The viewer target kept the original id.
-- `viewers` and `operator` roles granted `ids=*;type=target;actions=authorize-session`.
-  Pinned to their own target id.
-- Credential store creation from the UI failed until a **worker filter** was
-  set — the HCP controller cannot reach the internal NLB; only the in-VPC
-  worker can.
-- "Cannot add brokered credential sources" was simply: no credential
-  **libraries** existed yet. Libraries need `POST` and
-  `{"kubernetes_namespace":"demo-app"}`; a GET returns 404/405.
-- Editing an org role's scopes threw `iam_role_org_grant_scope_fkey`: an org
-  role cannot have `children` **and** an individual project. Pick one.
-
-**Still open:**
-
-- Roles `target-read-only` (`r_hKbTJaPsnM`) and `Login and Default Grants`
-  (`r_mAiKdBC8gx`) still grant `authorize-session` on **every** target to
-  Google-auth users — including your own Google login. Strip the
-  `type=target` line or delete them.
-- `boundary/` Terraform expects project `eks-access`, project-scoped roles and
-  a name-based worker filter. Live is project `linux`, org-scoped roles, tag
-  filters. Either `terraform import` the live objects or accept the drift.
-- Node security-group rules for the Vault NLB NodePorts (30773, 32531 from
-  0.0.0.0/0) are added by the in-tree cloud controller and are not in
-  Terraform. Narrow with `spec.loadBalancerSourceRanges` if wanted.
-
-**Before any further Boundary / Vault change, check:** current Vault NLB
-hostname · every filter is a tag filter · each target has exactly one library ·
-every `authorize-session` grant is pinned to a target id · worker version ≤ HCP
-controller · `--profile pegb`.
-
----
-
-# Troubleshooting
-
-Symptoms actually hit while building this, and their causes:
-
-| Symptom | Cause |
-|---|---|
-| `unsupported Kubernetes version 1.29` | Version out of EKS support. `aws eks describe-cluster-versions` lists creatable ones |
-| `name_prefix ... (1 - 38), got ...` | Node group IAM role name too long — set `iam_role_name` + `iam_role_use_name_prefix = false` |
-| Worker crash-loops, `config cannot contain name or description` | `name` in `worker.hcl` with activation-token auth — set it via `-name` at registration |
-| `No egress workers can handle this session` | Target's egress filter does not match the worker's registered name |
-| `failed to create a service account token ... forbidden` | Step 3b missing — `auth-delegator` is not enough |
-| Okta `invalid_scope` | Requesting `groups` from a custom authorization server that has no such scope |
-| Okta `Policy evaluation failed` | Custom authorization server has no Access Policy permitting the client |
-| `'groups' is reserved and cannot be used` | Naming a custom claim `groups` — it is a reserved scope on the org server |
-| Login works, targets list empty | Managed group matched nobody. Check the claim reaches the **ID token**, then that group names match exactly |
-| Target visible but Connect denied | Seeing it via `Default Grants` (`u_auth`), not a role. Listing ≠ `authorize-session` |
-| Membership unchanged after fixing Okta | Groups are evaluated at login. Log out fully — a cached Okta session reissues the old claims |
-
-**Debugging managed groups:** create a temporary managed group with a filter you
-know must match, e.g. `"/token/email" == "you@example.com"`, and another with
-`"/token/groups" is not empty`. One login then distinguishes "claims are not
-arriving at all" from "claims arrive but values differ".
-
----
-
-# File structure
+# Repository layout
 
 ```
 aws/                      AWS: VPC, EKS, node group, Boundary worker EC2
@@ -973,6 +708,7 @@ vault/                    Kubernetes secrets engine + one role per tier
 boundary/                 scope, managed groups, roles, host catalog, targets
   credentials.tf          Vault credential store, libraries, per-tier targets
   MANUAL-SETUP.md         the same objects built by hand in the UI
+ISSUES.md                 the full failure log: causes, fixes, troubleshooting table
 docs/                     diagrams (SVG, rendered inline above)
 autoscaling/              worker pool on an ASG: self-register / self-deregister,
                           scaled by Datadog -> GitHub Actions  (README.md = automated,
@@ -994,9 +730,9 @@ Terraform cannot own that resource without the secret being pasted in.
 **Not in git, by design:** `*.tfstate` (holds the Vault broker token and cluster
 CA in cleartext), `*.tfvars`, `vault-sa-token.txt`, `ca.crt`, kubeconfigs.
 
-# Security notes
+# Security posture and roadmap
 
-Known-weak by design here, and what to change for anything real:
+Known-weak by design in this build, and what changes for production:
 
 - **Vault dev mode** — in-memory storage (a pod restart wipes every mount, role
   and policy), auto-unsealed, root token `root`, and plaintext HTTP across the
@@ -1015,3 +751,11 @@ Known-weak by design here, and what to change for anything real:
 - **A global role grants `target list` to every authenticated user** on this
   shared cluster. Cosmetic (connect is separately gated) but it means target
   names are visible org-wide.
+
+**Roadmap**
+
+- Workers as a self-registering pool on an Auto Scaling Group, scaled by
+  Datadog session counts through GitHub Actions — built, documented in
+  [`autoscaling/`](autoscaling/), pending first apply.
+- Vault to HCP Vault Dedicated with a private HVN endpoint, removing dev mode.
+- Session recording on the Boundary targets for a full audit trail.
