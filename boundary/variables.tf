@@ -69,9 +69,13 @@ variable "eks_api_endpoint" {
 }
 
 variable "boundary_worker_filter" {
-  description = "Worker filter to route traffic through self-managed worker in VPC"
+  # A tag filter, not a name filter. Autoscaled workers (../autoscaling) register
+  # under generated names (worker-i-0abc...), so pinning a name would leave
+  # every new worker unused. Every worker - the original single instance and
+  # the ASG ones - carries type=eks in its worker.hcl tags.
+  description = "Worker filter that selects any in-VPC worker tagged type=eks"
   type        = string
-  default     = "\"/name\" == \"kst-eks-ap-southeast-1-worker-01\""
+  default     = "\"eks\" in \"/tags/type\""
 }
 
 # =============================================================================
@@ -114,9 +118,12 @@ variable "viewer_emails" {
 # =============================================================================
 
 variable "vault_address" {
+  # The NLB hostname changes every time the Service is recreated. Read it with
+  #   kubectl -n vault get svc vault -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+  # and pass -var vault_address=... rather than trusting this default.
   description = "Vault API address reachable from the Boundary worker inside the VPC. A ClusterIP will not work - this is the internal NLB created by the Helm chart's service.type=LoadBalancer."
   type        = string
-  default     = "http://a7ecb200b200048908bda9672c4103e7-ac9c1c76c319a814.elb.ap-southeast-1.amazonaws.com:8200"
+  default     = "http://aa837cd050a9d43028df5e6987267f93-d3fb677640c1fdfb.elb.ap-southeast-1.amazonaws.com:8200"
 }
 
 variable "vault_boundary_token" {

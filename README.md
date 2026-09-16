@@ -4,8 +4,11 @@ Short-lived, RBAC-scoped Kubernetes access to a **private** EKS endpoint. No
 kubeconfig handed out, no long-lived credentials, no public API surface.
 
 This README is the **manual runbook** — every step done by hand, in the order
-that works. Terraform for each layer lives in `terraform/`, `vault/` and
+that works. Terraform for each layer lives in `aws/`, `vault/` and
 `boundary/` and can replace these steps once the flow is understood.
+
+New here? Go to [**Start here — the five scenes**](#start-here--the-five-scenes)
+first. Each one has a *Manual* half and an *Automation* half; do them in order.
 
 ---
 
@@ -87,10 +90,30 @@ TLS is end to end between kubectl and the EKS API — every hop in between relay
 ciphertext it cannot read. Hence `--tls-server-name` and the cluster CA on the
 kubectl command: you dial `127.0.0.1`, but you validate the EKS certificate.
 
-### Live Excalidraw boards
+## Start here — the five scenes
 
-Working boards, kept up to date by hand. Placeholders — swap in your own links
-if you fork this.
+**Steps 1–5 are the foundation. They are very important and they build on each
+other — do not skip one, do not reorder.** Each scene is a drawing in the
+*platform-engineering* Excalidraw collection. For every step: **Manual** is what
+you do by hand (console, UI, CLI) to understand it; **Automation** is the code
+in this repo that does the same thing once you do.
+
+| # | Scene (open the drawing) | What it settles | Manual | Automation |
+|---|---|---|---|---|
+| **1** | [VPC & subnets — analysis → ClickOps](https://app.excalidraw.com/s/9hD7S5FgGWN/73UzMQca6Am) | one VPC, 3 AZs, public + private subnets, NAT, the subnet tags EKS and the NLB discover | AWS console, exactly as drawn: VPC → subnets → NAT → route tables → tags `kubernetes.io/role/elb` / `internal-elb` | [`aws/vpc.tf`](aws/vpc.tf) — `terraform-aws-modules/vpc` |
+| **2** | [EKS — detailed analysis](https://app.excalidraw.com/s/9hD7S5FgGWN/2XoNL6sXrLz) | private endpoint, access-entries auth, node group, the RBAC tiers (SA → RoleBinding → Role) | console: create cluster (private only), node group, access entry for your IAM user; then `kubectl apply -f k8s/rbac.yaml` — [Step 1](#step-1--eks-cluster), [Step 2](#step-2--kubernetes-rbac) | [`aws/eks.tf`](aws/eks.tf), [`k8s/rbac.yaml`](k8s/rbac.yaml) |
+| **3** | [Boundary ↔ Okta identity](https://app.excalidraw.com/s/9hD7S5FgGWN/7rGrKHxR5PL) | Okta app + groups claim → OIDC auth method → managed groups → roles → grants | Okta admin + Boundary UI — [Step 5](#step-5--okta), [Step 6](#step-6--boundary), [`boundary/MANUAL-SETUP.md`](boundary/MANUAL-SETUP.md) | [`boundary/main.tf`](boundary/main.tf) (managed groups, roles, host catalog, targets) |
+| **4** | [Boundary → Okta → Vault → EKS RBAC](https://app.excalidraw.com/s/9hD7S5FgGWN/2didKmVk95t) | the whole runtime path: worker in the VPC, Vault k8s secrets engine, credential brokering, one target per tier, the numbered 1–8 flow | [Step 3](#step-3--vault), [Step 4](#step-4--boundary-worker), [Step 7](#step-7--vault-credential-brokering), [Step 8](#step-8--end-to-end), [`vault/MANUAL-SETUP.md`](vault/MANUAL-SETUP.md) | [`aws/boundary-worker.tf`](aws/boundary-worker.tf), [`vault/main.tf`](vault/main.tf), [`boundary/credentials.tf`](boundary/credentials.tf) |
+| **5** | [Issues — what broke and why](https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P) | the 12 failures from the real build, their causes, the checklist, and why the autoscaling design looks the way it does | run the checklist in [State before autoscaling](#state-before-autoscaling-2026-09-15); then [`autoscaling/MANUAL-WALKTHROUGH.md`](autoscaling/MANUAL-WALKTHROUGH.md) parts A–G by hand | [`autoscaling/README.md`](autoscaling/README.md) — Terraform + Packer/Ansible + GitHub Actions |
+
+Rule of thumb for each step: **do the Manual column once, watch it work, then
+apply the Automation column and confirm it produces the same objects.** If the
+two differ, the drawing is the truth and the code has drifted.
+
+### Supporting boards
+
+Older working boards in the *hellocloud* collection — useful detail, not part
+of the path above.
 
 | Board | What it shows |
 |---|---|
@@ -109,11 +132,9 @@ via *File → Open*:
 | [docs/architecture.excalidraw](docs/architecture.excalidraw) | the whole system, with the numbered runtime flow |
 | [docs/setup-steps.excalidraw](docs/setup-steps.excalidraw) | all 8 build steps, each with the trap that bites in it |
 | [docs/command-walkthrough.excalidraw](docs/command-walkthrough.excalidraw) | steps 3–8 as command cards |
-| [docs/boundary-okta-identity.excalidraw](docs/boundary-okta-identity.excalidraw) | original identity-flow sketch |
-| [docs/eks-detailed-analysis.excalidraw](docs/eks-detailed-analysis.excalidraw) | original EKS analysis sketch |
 
-Terminal output from a real build is in [docs/run-logs/](docs/run-logs/), and
-console screenshots in [screenshots/](screenshots/).
+Terminal captures from the real build live in `docs/run-logs/` on the build
+machine only (gitignored).
 
 ## Reference values
 
@@ -123,41 +144,54 @@ endpoint, all `ttcp_` target ids, the project id, the worker id and the Vault
 NLB hostname all change. Re-read them from `terraform output` and
 `boundary targets list` rather than trusting this block.
 
-Values below are from the 2026-09-10 rebuild.
+Values below are from the live state on 2026-09-15 (after the target split —
+see "State before autoscaling" near the end).
 
 ```
-Region / profile   ap-southeast-1 / pegb
+Region / profile   ap-southeast-1 / pegb        (the `default` profile is expired - always pass pegb)
 Cluster            hc-eks-cluster  (k8s 1.35, auth mode API)
 API endpoint       6F66E12DC9593ADDD5CA21204650E2DA.gr7.ap-southeast-1.eks.amazonaws.com
                    private 10.0.2.250 / 10.0.1.7
 VPC                10.0.0.0/16   private 10.0.1-3.0/24   public 10.0.101-103.0/24
 Boundary           https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud
-Org / project      o_cr9ncHM3kS (kst-devops) / p_vdOVUBaoKi (eks-access)
+Org / project      o_cr9ncHM3kS (kst-devops) / p_UMfkhp0pCv (linux)   <- built by hand; boundary/ Terraform still says eks-access
+Global pw auth     ampw_WNbi76VghW
 Worker             kst-eks-ap-southeast-1-worker-01
-                   w_Utxtk12Y90   10.0.1.240   Boundary v1.0.1+ent
+                   w_K3RyLndlV4   tags type=[eks, vpc, private, k8s_vault]   Boundary v1.0.1+ent
 Okta auth method   amoidc_eY8ldrT0GG (HC OKTA)  client 0oa174q3bo5aaqXHr698
-Vault (internal)   aa9fd99f17e7c4b158a9fe0c3281efe1-...elb.ap-southeast-1.amazonaws.com:8200
-Credential store   csvlt_srztC311cg
+Vault (internal)   http://aa837cd050a9d43028df5e6987267f93-d3fb677640c1fdfb.elb.ap-southeast-1.amazonaws.com:8200
+                   (changes every time the Service is recreated - read it with
+                    kubectl -n vault get svc vault -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+Credential store   csvlt_xEcOfrT5Sx   worker_filter "eks" in "/tags/type"
 
-Targets, one per tier - each brokers its own Vault credential:
-  eks-api-viewer     ttcp_QL8eAjhITq    ->  clvlt_lUnnlUrd8r  ->  kubernetes/creds/viewer
-  eks-api-operator   ttcp_pOHfiqkgLC    ->  clvlt_A0vzKjRvRs  ->  kubernetes/creds/operator
-  eks-api-admin      ttcp_fGSa9fmcIL    ->  clvlt_14kvRIYp2z  ->  kubernetes/creds/admin
+Targets, one per tier - each brokers exactly ONE Vault credential:
+  eks-api-viewer     ttcp_d9cw5TgQOO    ->  clvlt_fC94KKXa3Z  ->  kubernetes/creds/viewer
+  eks-api-operator   ttcp_jeFYI2LB06    ->  clvlt_xK10mY4Mol  ->  kubernetes/creds/operator
+  eks-api-admin      ttcp_oZ4UOSIoXm    ->  clvlt_YwAqiKc1TJ  ->  kubernetes/creds/admin
+  egress_worker_filter on all three:  "k8s_vault" in "/tags/type"
 
 Managed groups on the Okta auth method:
-  viewers   mgoidc_tnj4qkxCc2      operators mgoidc_EJxucON49R
-  admins    mgoidc_2KNhP1ZYCz
+  viewers   mgoidc_bS1PpJhm0i      operators mgoidc_ZKiUHEKsPZ
+  admins    mgoidc_EzvkGq9PYp
+
+Roles (org level, grant scope this + the project):
+  viewers  r_7dhKthDv6h  ids=ttcp_d9cw5TgQOO;type=target;actions=list,no-op,authorize-session
+  operator r_ONl6HaVG9B  ids=ttcp_jeFYI2LB06;type=target;actions=list,no-op,read,authorize-session
+  admin    r_s4rOl3yCNN  ids=*;type=target;actions=*
 ```
 
 ---
 
 # Step 1 — EKS cluster
 
+> **Scene [1](https://app.excalidraw.com/s/9hD7S5FgGWN/73UzMQca6Am) + [2](https://app.excalidraw.com/s/9hD7S5FgGWN/2XoNL6sXrLz)** · **Manual:** AWS console — VPC, subnets, NAT, then EKS with the public endpoint OFF, one node group, an access entry for your IAM user
+> **Automation:** [`aws/vpc.tf`](aws/vpc.tf), [`aws/eks.tf`](aws/eks.tf) — `terraform apply` in `aws/`
+
 Infrastructure is the one layer where Terraform is genuinely simpler than
 clicking; the manual equivalent is dozens of console screens.
 
 ```bash
-cd terraform
+cd aws
 terraform init
 terraform apply          # VPC, 3 AZs, NAT, EKS, node group, Boundary worker EC2
 ```
@@ -186,6 +220,9 @@ setup. The demo is about *not* needing it.
 ---
 
 # Step 2 — Kubernetes RBAC
+
+> **Scene [2](https://app.excalidraw.com/s/9hD7S5FgGWN/2XoNL6sXrLz)** · **Manual:** read `k8s/rbac.yaml` and check each SA → RoleBinding → Role pair against the drawing
+> **Automation:** `kubectl apply -f` [`k8s/rbac.yaml`](k8s/rbac.yaml)
 
 Vault issues tokens *for* ServiceAccounts; it does not create them. These must
 exist before Vault is configured.
@@ -218,6 +255,9 @@ kubectl auth can-i delete deployments --as=system:serviceaccount:demo-app:vault-
 ---
 
 # Step 3 — Vault
+
+> **Scene [4](https://app.excalidraw.com/s/9hD7S5FgGWN/2didKmVk95t)** · **Manual:** 3a–3e below with the CLI, or [`vault/MANUAL-SETUP.md`](vault/MANUAL-SETUP.md)
+> **Automation:** [`vault/main.tf`](vault/main.tf) — secrets engine + one role per tier (3a install stays manual)
 
 ## 3a. Install (dev mode)
 
@@ -351,10 +391,13 @@ vault write kubernetes/creds/viewer kubernetes_namespace=demo-app
 
 # Step 4 — Boundary worker
 
+> **Scene [4](https://app.excalidraw.com/s/9hD7S5FgGWN/2didKmVk95t)** · **Manual:** read the auth token off the instance over SSM and activate it from your laptop (below)
+> **Automation:** [`aws/boundary-worker.tf`](aws/boundary-worker.tf) builds the instance; [`autoscaling/`](autoscaling/) replaces it with a self-registering pool
+
 HCP's cloud workers cannot see a private endpoint. A self-managed worker inside
 the VPC dials *out* to HCP, giving Boundary a reverse tunnel in.
 
-The EC2 instance is created by `terraform/boundary-worker.tf` in step 1 — a
+The EC2 instance is created by `aws/boundary-worker.tf` in step 1 — a
 t3.micro in a private subnet, no public IP, no SSH key, SSM only. Cloud-init
 installs `boundary-enterprise` and starts a systemd unit.
 
@@ -389,6 +432,9 @@ Two things that will cost you an hour each:
 ---
 
 # Step 5 — Okta
+
+> **Scene [3](https://app.excalidraw.com/s/9hD7S5FgGWN/7rGrKHxR5PL)** · **Manual:** Okta admin console — app, groups, groups claim (5a–5c). This step is manual only
+> **Automation:** none — Boundary never returns the Okta client secret, so Terraform cannot own the auth method
 
 ## 5a. Application
 
@@ -441,6 +487,9 @@ IDs, the Boundary filters must match the IDs instead.
 ---
 
 # Step 6 — Boundary
+
+> **Scene [3](https://app.excalidraw.com/s/9hD7S5FgGWN/7rGrKHxR5PL)** · **Manual:** Boundary UI, 6a–6e below, or [`boundary/MANUAL-SETUP.md`](boundary/MANUAL-SETUP.md)
+> **Automation:** [`boundary/main.tf`](boundary/main.tf) — managed groups, roles, host catalog, targets (auth method stays manual)
 
 ## 6a. Project scope
 
@@ -516,11 +565,15 @@ In the project:
    host source `eks-api-hosts`, and:
 
 ```
-Egress worker filter:  "/name" == "kst-eks-ap-southeast-1-worker-01"
+Egress worker filter:  "eks" in "/tags/type"
 ```
 
-That filter is load-bearing and must match the worker's **registered** name. A
-mismatch fails at session time with:
+That filter is load-bearing. It used to match the worker's **registered name**;
+it now matches a **tag** the worker sets in its own `worker.hcl`
+(`tags { type = ["eks", ...] }`). Reason: [autoscaling](autoscaling/) adds
+workers with generated names (`worker-i-0abc…`), and a name filter would leave
+every one of them unused. A filter that matches nothing fails at session time
+with:
 
 ```
 No egress workers can handle this session, as they have all been filtered out
@@ -529,6 +582,9 @@ No egress workers can handle this session, as they have all been filtered out
 ---
 
 # Step 7 — Vault credential brokering
+
+> **Scene [4](https://app.excalidraw.com/s/9hD7S5FgGWN/2didKmVk95t)** · **Manual:** 7a–7c below: NLB, scoped token, credential store + libraries in the UI (worker filter first!)
+> **Automation:** [`boundary/credentials.tf`](boundary/credentials.tf) — store, libraries, one target per tier
 
 Steps 1-6 leave one wart: to get a Vault credential you port-forward to Vault,
 which uses your **admin kubeconfig** — the exact access this design exists to
@@ -591,6 +647,9 @@ A wildcard (`ids=*`) here is a privilege escalation: a viewer could authorize
 
 # Step 8 — End to end
 
+> **Scene [4](https://app.excalidraw.com/s/9hD7S5FgGWN/2didKmVk95t) → [5](https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P)** · **Manual:** two terminals below; then run the checklist in [State before autoscaling](#state-before-autoscaling-2026-09-15)
+> **Automation:** [`autoscaling/scripts/loadtest.sh`](autoscaling/scripts/loadtest.sh) opens N sessions; [`autoscaling/README.md`](autoscaling/README.md) takes it from here
+
 ```bash
 export BOUNDARY_ADDR=https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud
 boundary authenticate oidc -auth-method-id=amoidc_eY8ldrT0GG
@@ -632,8 +691,7 @@ Note `viewer` can read Secrets — see Security notes.
 
 # Problems found on the 2026-09-10/12 rebuild
 
-Everything in this section was hit, measured and fixed on a live rebuild. Raw
-terminal output is in [docs/run-logs/](docs/run-logs/).
+Everything in this section was hit, measured and fixed on a live rebuild.
 
 **Vault's own credential expires after ~24 hours, and the error blames the wrong
 ServiceAccount.** Step 3d originally ran
@@ -682,7 +740,7 @@ verified by SHA256. Second, a worker newer than its controller cannot enrol —
 `1.0.2+ent` against a `1.0.1` controller fails with
 `(nodeenrollment.registration.validateFetchRequest) empty nonce` and
 `remote error: tls: internal error`. Both are now variables
-(`boundary_version`, `boundary_sha256`) in `terraform/variables.tf`.
+(`boundary_version`, `boundary_sha256`) in `aws/variables.tf`.
 
 **An egress worker filter alone is not enough — multi-hop is required.** The
 client must reach *some* worker, and a self-managed worker in a private subnet
@@ -837,6 +895,48 @@ Vault broker token in cleartext. State is gitignored; treat it as a credential.
 
 ---
 
+# State before autoscaling (2026-09-15)
+
+What was found and fixed live, one session before the autoscaling work.
+Drawn in Excalidraw as *hellocloud → "Issues before autoscaling"*.
+
+**Fixed live in Boundary (not yet reflected in `boundary/*.tf`):**
+
+- The single target `eks-api` carried **all three** credential libraries, so
+  every authorized session returned viewer + operator + admin tokens. Split
+  into `eks-api-viewer` / `-operator` / `-admin` (ids in the reference block),
+  one library each. The viewer target kept the original id.
+- `viewers` and `operator` roles granted `ids=*;type=target;actions=authorize-session`.
+  Pinned to their own target id.
+- Credential store creation from the UI failed until a **worker filter** was
+  set — the HCP controller cannot reach the internal NLB; only the in-VPC
+  worker can.
+- "Cannot add brokered credential sources" was simply: no credential
+  **libraries** existed yet. Libraries need `POST` and
+  `{"kubernetes_namespace":"demo-app"}`; a GET returns 404/405.
+- Editing an org role's scopes threw `iam_role_org_grant_scope_fkey`: an org
+  role cannot have `children` **and** an individual project. Pick one.
+
+**Still open:**
+
+- Roles `target-read-only` (`r_hKbTJaPsnM`) and `Login and Default Grants`
+  (`r_mAiKdBC8gx`) still grant `authorize-session` on **every** target to
+  Google-auth users — including your own Google login. Strip the
+  `type=target` line or delete them.
+- `boundary/` Terraform expects project `eks-access`, project-scoped roles and
+  a name-based worker filter. Live is project `linux`, org-scoped roles, tag
+  filters. Either `terraform import` the live objects or accept the drift.
+- Node security-group rules for the Vault NLB NodePorts (30773, 32531 from
+  0.0.0.0/0) are added by the in-tree cloud controller and are not in
+  Terraform. Narrow with `spec.loadBalancerSourceRanges` if wanted.
+
+**Before any further Boundary / Vault change, check:** current Vault NLB
+hostname · every filter is a tag filter · each target has exactly one library ·
+every `authorize-session` grant is pinned to a target id · worker version ≤ HCP
+controller · `--profile pegb`.
+
+---
+
 # Troubleshooting
 
 Symptoms actually hit while building this, and their causes:
@@ -865,7 +965,7 @@ arriving at all" from "claims arrive but values differ".
 # File structure
 
 ```
-terraform/                AWS: VPC, EKS, node group, Boundary worker EC2
+aws/                      AWS: VPC, EKS, node group, Boundary worker EC2
   boundary-worker.tf      worker instance, IAM, security group, cloud-init
 k8s/rbac.yaml             namespace, ServiceAccounts, Roles, RoleBindings
 vault/                    Kubernetes secrets engine + one role per tier
@@ -874,10 +974,17 @@ boundary/                 scope, managed groups, roles, host catalog, targets
   credentials.tf          Vault credential store, libraries, per-tier targets
   MANUAL-SETUP.md         the same objects built by hand in the UI
 docs/                     diagrams (SVG, rendered inline above)
+autoscaling/              worker pool on an ASG: self-register / self-deregister,
+                          scaled by Datadog -> GitHub Actions  (README.md = automated,
+                          MANUAL-WALKTHROUGH.md = the same by hand, parts A-G)
+  brokers/                Boundary broker users + Vault AWS-auth roles + KV
+  ansible/ packer/        the worker AMI and its three scripts
+  asg/ datadog/           ASG + lifecycle hook + GitHub OIDC role; monitors + dashboard
+.github/workflows/        scale.yml, ami-build.yml, infra.yml, rotate-broker-creds.yml
 ```
 
 Three independent Terraform roots, three separate states, applied in order:
-`terraform/` (AWS) → `vault/` (optional; the CLI path is documented) →
+`aws/` → `vault/` (optional; the CLI path is documented) →
 `boundary/`. They do not share state; values pass by hand or by variable.
 
 `boundary/` takes an existing OIDC auth method **ID** as a variable rather than

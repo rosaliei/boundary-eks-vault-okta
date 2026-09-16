@@ -1,0 +1,60 @@
+# Triggered by the Datadog webhooks (autoscaling/datadog). Moves the ASG's
+# desired capacity by one in the requested direction, clamped to [min, max].
+# Idempotent: at the bound it exits green without changing anything.
+name: scale-workers
+
+on:
+  repository_dispatch:
+    types: [scale]
+  workflow_dispatch:
+    inputs:
+      direction:
+        description: "out | in"
+        required: true
+        default: "out"
+
+# Two alerts close together must not race each other.
+concurrency:
+  group: scale-${{ github.event.client_payload.asg || 'boundary-workers' }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-southeast-1
+  ASG_NAME: ${{ github.event.client_payload.asg || 'boundary-workers' }}
+  DIRECTION: ${{ github.event.client_payload.direction || github.event.inputs.direction }}
+
+jobs:
+  scale:
+    runs-on: ubuntu-latest
+    steps:
+      - name: AWS credentials (OIDC, no static keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GHA_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Move desired capacity by one
+        run: |
+          set -euo pipefail
+          read -r MIN MAX DESIRED < <(aws autoscaling describe-auto-scaling-groups \
+            --auto-scaling-group-names "$ASG_NAME" \
+            --query 'AutoScalingGroups[0].[MinSize,MaxSize,DesiredCapacity]' --output text)
+          echo "asg=$ASG_NAME min=$MIN max=$MAX desired=$DESIRED direction=$DIRECTION"
+
+          case "$DIRECTION" in
+            out) NEW=$((DESIRED + 1)); [ "$NEW" -gt "$MAX" ] && NEW=$MAX ;;
+            in)  NEW=$((DESIRED - 1)); [ "$NEW" -lt "$MIN" ] && NEW=$MIN ;;
+            *)   echo "unknown direction '$DIRECTION'"; exit 1 ;;
+          esac
+
+          if [ "$NEW" -eq "$DESIRED" ]; then
+            echo "already at bound ($DESIRED); nothing to do"; exit 0
+          fi
+          aws autoscaling set-desired-capacity \
+            --auto-scaling-group-name "$ASG_NAME" --desired-capacity "$NEW" --honor-cooldown || {
+              echo "cooldown active; skipping this tick"; exit 0; }
+          echo "desired: $DESIRED -> $NEW (monitor: ${{ github.event.client_payload.monitor || 'manual' }})"

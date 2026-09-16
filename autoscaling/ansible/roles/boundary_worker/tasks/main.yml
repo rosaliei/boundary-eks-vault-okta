@@ -1,0 +1,155 @@
+---
+# Bakes a Boundary worker AMI. Nothing here is instance-specific; the three
+# scripts read /etc/boundary/env (written by user-data) at boot.
+
+- name: Base packages
+  ansible.builtin.dnf:
+    name: [unzip, jq, curl]
+    state: present
+
+# --- Boundary Enterprise -----------------------------------------------------
+# Release archive, not the RPM repo: the repo's GPG key no longer matches the
+# key the +ent package is signed with (see ../../aws/boundary-worker.tf).
+- name: Download Boundary {{ boundary_version }}
+  ansible.builtin.get_url:
+    url: "https://releases.hashicorp.com/boundary/{{ boundary_version | replace('+', '%2B') }}/boundary_{{ boundary_version | replace('+', '%2B') }}_linux_amd64.zip"
+    dest: /tmp/boundary.zip
+    checksum: "sha256:{{ boundary_sha256 }}"
+    mode: "0644"
+
+- name: Install Boundary binary
+  ansible.builtin.unarchive:
+    src: /tmp/boundary.zip
+    dest: /usr/bin
+    remote_src: true
+    include: [boundary]
+    mode: "0755"
+
+# --- Vault CLI ---------------------------------------------------------------
+- name: Fetch Vault SHA256SUMS
+  ansible.builtin.get_url:
+    url: "https://releases.hashicorp.com/vault/{{ vault_version }}/vault_{{ vault_version }}_SHA256SUMS"
+    dest: /tmp/vault_SHA256SUMS
+    mode: "0644"
+
+- name: Read expected Vault checksum
+  ansible.builtin.shell: grep 'linux_amd64.zip' /tmp/vault_SHA256SUMS | awk '{print $1}'
+  register: vault_sum
+  changed_when: false
+
+- name: Download Vault {{ vault_version }}
+  ansible.builtin.get_url:
+    url: "https://releases.hashicorp.com/vault/{{ vault_version }}/vault_{{ vault_version }}_linux_amd64.zip"
+    dest: /tmp/vault.zip
+    checksum: "sha256:{{ vault_sum.stdout }}"
+    mode: "0644"
+
+- name: Install Vault binary
+  ansible.builtin.unarchive:
+    src: /tmp/vault.zip
+    dest: /usr/bin
+    remote_src: true
+    include: [vault]
+    mode: "0755"
+
+# --- boundary user + dirs ----------------------------------------------------
+- name: boundary system user
+  ansible.builtin.user:
+    name: boundary
+    system: true
+    shell: /sbin/nologin
+    create_home: false
+
+- name: Directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: boundary
+    group: boundary
+    mode: "0750"
+  loop:
+    - /etc/boundary
+    - /opt/boundary/worker
+    - /var/log/boundary
+
+# --- scripts -----------------------------------------------------------------
+- name: Shared shell library
+  ansible.builtin.copy:
+    src: boundary-common.sh
+    dest: /usr/local/lib/boundary-common.sh
+    mode: "0644"
+
+- name: Worker scripts
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    mode: "0755"
+  loop:
+    - boundary-register.sh
+    - boundary-lifecycle.sh
+    - boundary-protect.sh
+
+- name: systemd units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    mode: "0644"
+  loop:
+    - boundary-register.service
+    - boundary-worker.service
+    - boundary-lifecycle.service
+    - boundary-protect.service
+    - boundary-protect.timer
+
+# Enabled but not started: they gate on /etc/boundary/env, which only exists
+# on a real instance after user-data has run.
+- name: Enable units
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    daemon_reload: true
+  loop:
+    - boundary-register.service
+    - boundary-worker.service
+    - boundary-lifecycle.service
+    - boundary-protect.timer
+
+# --- Datadog Agent -----------------------------------------------------------
+# Install only. The API key is fetched from SSM at boot by user-data and
+# written into datadog.yaml then; it is never baked into the image.
+- name: Install Datadog Agent 7 (install-only)
+  ansible.builtin.shell: |
+    DD_API_KEY=00000000000000000000000000000000 DD_SITE={{ datadog_site }} DD_INSTALL_ONLY=true \
+      bash -c "$(curl -L https://install.datadoghq.com/scripts/install_script_agent7.sh)"
+  args:
+    creates: /opt/datadog-agent/bin/agent/agent
+
+- name: Datadog custom check
+  ansible.builtin.copy:
+    src: boundary_worker.py
+    dest: /etc/datadog-agent/checks.d/boundary_worker.py
+    owner: dd-agent
+    group: dd-agent
+    mode: "0644"
+
+- name: Datadog check + log config
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: dd-agent
+    group: dd-agent
+    mode: "0640"
+  loop:
+    - { src: dd-boundary_worker.conf.yaml.j2, dest: /etc/datadog-agent/conf.d/boundary_worker.d/conf.yaml }
+
+- name: dd-agent may read the Boundary event log
+  ansible.builtin.user:
+    name: dd-agent
+    groups: boundary
+    append: true
+
+- name: Clean build artefacts
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: [/tmp/boundary.zip, /tmp/vault.zip, /tmp/vault_SHA256SUMS]

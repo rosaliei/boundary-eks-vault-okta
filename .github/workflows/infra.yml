@@ -1,0 +1,69 @@
+# Terraform for the ASG (autoscaling/asg) and Datadog
+# (autoscaling/datadog). Plan on pull request, apply on main.
+#
+# The brokers module (Boundary users + Vault roles) is NOT run here: it talks
+# to the in-cluster Vault, which GitHub-hosted runners cannot reach. Apply it
+# from a laptop (README step 2). If you move to HCP Vault with a public
+# endpoint, add it as a third job using hashicorp/vault-action with jwt auth.
+name: infra
+
+on:
+  pull_request:
+    paths: ["autoscaling/asg/**", "autoscaling/datadog/**"]
+  push:
+    branches: [main]
+    paths: ["autoscaling/asg/**", "autoscaling/datadog/**"]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+env:
+  AWS_REGION: ap-southeast-1
+  TF_VERSION: "1.9.8"
+
+jobs:
+  asg:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: autoscaling/asg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GHA_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      # Local state lives on your laptop today. For the pipeline to own this
+      # module, move both this module and ../../terraform to an S3 backend
+      # first (README "before the pipeline" note).
+      - run: terraform init -input=false
+      - run: terraform plan -input=false -var aws_profile="" -out tfplan
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -input=false tfplan
+
+  datadog:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: autoscaling/datadog
+    env:
+      TF_VAR_datadog_api_key: ${{ secrets.DATADOG_API_KEY }}
+      TF_VAR_datadog_app_key: ${{ secrets.DATADOG_APP_KEY }}
+      TF_VAR_github_repo: ${{ github.repository }}
+      TF_VAR_github_dispatch_token: ${{ secrets.GH_DISPATCH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - run: terraform init -input=false
+      - run: terraform plan -input=false -out tfplan
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -input=false tfplan

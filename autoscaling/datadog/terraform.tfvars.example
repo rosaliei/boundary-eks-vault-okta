@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars (gitignored).
+datadog_api_key       = "..."
+datadog_app_key       = "..."
+datadog_site          = "datadoghq.com"      # or ap1.datadoghq.com, datadoghq.eu
+github_repo           = "your-org/hc-eks-vault-okta-boundary-rbac"
+github_dispatch_token = "github_pat_..."     # fine-grained, this repo only, contents: write
+# notify_handle       = "@you@example.com"

@@ -1,0 +1,17 @@
+[Unit]
+Description=Boundary Worker
+Requires=boundary-register.service
+After=boundary-register.service
+ConditionPathExists=/etc/boundary/worker.hcl
+
+[Service]
+User=boundary
+Group=boundary
+ExecStart=/usr/bin/boundary server -config=/etc/boundary/worker.hcl
+Restart=on-failure
+RestartSec=5
+LimitMEMLOCK=infinity
+AmbientCapabilities=CAP_IPC_LOCK
+
+[Install]
+WantedBy=multi-user.target

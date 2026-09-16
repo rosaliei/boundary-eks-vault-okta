@@ -1,0 +1,12 @@
+[Unit]
+Description=Drain + deregister this worker when the ASG or Spot removes it
+After=boundary-worker.service
+ConditionPathExists=/etc/boundary/env
+
+[Service]
+ExecStart=/usr/local/bin/boundary-lifecycle.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+# Datadog Agent: custom check + log tailing for the Boundary worker.
+init_config:
+
+instances:
+  - url: http://127.0.0.1:9203/health?worker_info=1
+    min_collection_interval: 15
+    # asg / worker_name tags are added as host tags in datadog.yaml at boot.
+
+logs:
+  - type: file
+    path: /var/log/boundary/events.log
+    service: boundary-worker
+    source: boundary

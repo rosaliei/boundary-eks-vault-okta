@@ -1,0 +1,17 @@
+[Unit]
+Description=Register this instance as an HCP Boundary worker (once)
+After=network-online.target
+Wants=network-online.target
+# user-data writes this file; on the Packer builder it does not exist.
+ConditionPathExists=/etc/boundary/env
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/boundary-register.sh
+# Vault or Boundary may not answer on the first try after boot.
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,7 @@
+[Unit]
+Description=Toggle ASG scale-in protection from active session count
+ConditionPathExists=/etc/boundary/env
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/boundary-protect.sh

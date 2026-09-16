@@ -1,0 +1,15 @@
+---
+# Pinned the same way ../../aws/boundary-worker.tf pins them. Do not
+# exceed the HCP controller version; must be the +ent build.
+boundary_version: "1.0.1+ent"
+boundary_sha256: "f74035e77cc4dab5c7f0f4c1fd886489ed6c8c6f928a456dea60f9424fec20bd"
+
+# Vault CLI is only used for `vault login -method=aws` and one `kv get`.
+# Verified at build time against the published SHA256SUMS for that version.
+vault_version: "1.18.3"
+
+datadog_site: "datadoghq.com"
+
+# Everything below is baked. Instance-specific values (cluster id, Vault addr,
+# region, hook name) come from /etc/boundary/env at boot - see
+# ../asg/user-data.sh.tpl.

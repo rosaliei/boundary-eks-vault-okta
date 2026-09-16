@@ -1,0 +1,55 @@
+# Rotates the two broker passwords. `-replace` on the random_password makes
+# Terraform set a new password on the Boundary account AND write it to Vault
+# KV in the same apply. Workers read KV at boot, so nothing running breaks.
+#
+# This is the "GitHub Actions triggers Vault" job. It needs Vault reachable
+# from the runner: HCP Vault (public endpoint + JWT auth bound to this repo),
+# or a self-hosted runner inside the VPC. With the in-cluster Vault behind an
+# internal NLB, run the same two commands from a laptop instead:
+#   cd autoscaling/brokers && terraform apply \
+#     -replace=random_password.broker[\"registrar\"] \
+#     -replace=random_password.broker[\"deregistrar\"]
+name: rotate-broker-creds
+
+on:
+  schedule:
+    - cron: "0 3 * * 1" # Mondays 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: autoscaling/brokers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      # Vault JWT auth: role bound to repo:<owner>/<repo>:ref:refs/heads/main.
+      - name: Vault login (GitHub OIDC -> Vault JWT auth)
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          method: jwt
+          role: gha-broker-rotation
+          exportToken: true
+
+      - name: Rotate
+        env:
+          TF_VAR_boundary_auth_method_id: ${{ secrets.BOUNDARY_AUTH_METHOD_ID }}
+          TF_VAR_boundary_admin_login_name: ${{ secrets.BOUNDARY_ADMIN_LOGIN }}
+          TF_VAR_boundary_admin_password: ${{ secrets.BOUNDARY_ADMIN_PASSWORD }}
+          TF_VAR_aws_account_id: ${{ secrets.AWS_ACCOUNT_ID }}
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+        run: |
+          terraform init -input=false
+          terraform apply -input=false -auto-approve \
+            -replace='random_password.broker["registrar"]' \
+            -replace='random_password.broker["deregistrar"]'

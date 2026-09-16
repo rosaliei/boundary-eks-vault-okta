@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars (gitignored). Admin creds are used for this apply only.
+boundary_auth_method_id   = "ampw_xxxxxxxxxx" # global password auth method
+boundary_admin_login_name = "admin"
+boundary_admin_password   = "..."
+aws_account_id            = "123456789012"
+# worker_iam_role_name    = "boundary-asg-worker"
+# vault_kv_mount          = "secret"

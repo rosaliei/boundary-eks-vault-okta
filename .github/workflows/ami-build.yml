@@ -1,0 +1,69 @@
+# Bakes a new worker AMI whenever the Ansible role or Packer template
+# changes, and publishes its id to SSM. The launch template reads that
+# parameter, so the next apply (or an instance refresh) rolls the pool.
+name: ami-build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "autoscaling/ansible/**"
+      - "autoscaling/packer/**"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-southeast-1
+  AMI_SSM_PARAM: /boundary-worker/ami_id
+
+jobs:
+  bake:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: autoscaling/packer
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GHA_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-packer@v3
+        with:
+          version: "1.11.2"
+
+      - name: Ansible
+        run: pipx install ansible-core==2.17.6
+
+      - name: Resolve VPC + a public subnet from tags
+        id: net
+        run: |
+          VPC=$(aws ec2 describe-vpcs --filters Name=tag:Project,Values=hc-eks-vault-boundary \
+                --query 'Vpcs[0].VpcId' --output text)
+          SUBNET=$(aws ec2 describe-subnets --filters Name=vpc-id,Values=$VPC "Name=tag:kubernetes.io/role/elb,Values=1" \
+                --query 'Subnets[0].SubnetId' --output text)
+          echo "vpc=$VPC" >> "$GITHUB_OUTPUT"; echo "subnet=$SUBNET" >> "$GITHUB_OUTPUT"
+
+      - name: packer init + build
+        run: |
+          packer init .
+          packer build -color=false \
+            -var region=$AWS_REGION \
+            -var vpc_id=${{ steps.net.outputs.vpc }} \
+            -var subnet_id=${{ steps.net.outputs.subnet }} .
+
+      - name: Publish AMI id to SSM
+        run: |
+          AMI=$(jq -r '.builds[-1].artifact_id | split(":")[1]' manifest.json)
+          echo "new AMI: $AMI"
+          aws ssm put-parameter --name "$AMI_SSM_PARAM" --type String --value "$AMI" --overwrite
+
+      - name: Roll the pool onto the new AMI
+        run: |
+          aws autoscaling start-instance-refresh --auto-scaling-group-name boundary-workers \
+            --preferences MinHealthyPercentage=100,InstanceWarmup=120 || echo "ASG not created yet - skipping refresh"

@@ -1,0 +1,7 @@
+---
+# Invoked by Packer (autoscaling/packer/worker.pkr.hcl) against the builder
+# instance. Also usable ad hoc: ansible-playbook -i <ip>, playbook.yml
+- hosts: all
+  become: true
+  roles:
+    - boundary_worker
