@@ -791,7 +791,7 @@ Known-weak by design in this build, and what changes for production:
 ---
 
 <p align="center">
-  <sub>Designed, built by hand, drawn, then automated by <b>Kyaw Si Thu</b> ·
+  <sub>Designed, built by hand, drawn, then automated by <b>Kyaw Sithu</b> ·
   <a href="https://kst-devops.com">kst-devops.com</a> ·
   <a href="https://github.com/rosaliei">@rosaliei</a></sub>
 </p>
