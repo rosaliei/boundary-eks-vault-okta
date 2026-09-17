@@ -207,13 +207,24 @@ All inside `eks-access`.
 Save, then attach the rest on the target's own pages:
 
 - **Host Sources** tab → add `eks-api-hosts`
-- **Workers** / egress filter field → `"/name" == "kst-eks-ap-southeast-1-worker-01"`
+- **Workers** / egress filter field → `"eks" in "/tags/type"`
 
 The egress worker filter is the load-bearing setting on this whole page. Without
 it, HCP's cloud-hosted workers try to reach a private endpoint they have no
-route to, and every session hangs until it times out. The value must match the
-name the worker was **registered** under — that name came from
-`boundary workers create -name=...`, not from `worker.hcl`.
+route to, and every session hangs until it times out.
+
+It is a **tag** filter, not a name filter, and it is what makes the original
+worker and the autoscaled pool one group: every worker sets
+`tags { type = ["eks", ...] }` in its own `worker.hcl` — the hand-registered
+`kst-eks-ap-southeast-1-worker-01` ([../aws/boundary-worker.tf](../aws/boundary-worker.tf))
+and every `worker-i-…` that self-registers from the ASG
+([../autoscaling](../autoscaling)). The filter was previously pinned to the
+registered name; that breaks the moment a worker with a generated name joins.
+The same filter must also be set on the **Vault credential store** (`vault`
+in the project) and on all three per-tier targets (`eks-api-viewer/operator/admin`,
+see [../boundary/credentials.tf](../boundary/credentials.tf)) — a filter that
+matches nothing fails at session time with
+`No egress workers can handle this session, as they have all been filtered out`.
 
 ---
 
@@ -226,7 +237,7 @@ export BOUNDARY_ADDR=https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashi
 boundary workers list -scope-id global
 
 # Log in as a member of one of the Okta groups
-boundary authenticate oidc -auth-method-id=<amoidc_...>
+boundary authenticate oidc -auth-method-id=amoidc_eY8ldrT0GG
 
 # Did the managed group match? Empty output = the groups claim never arrived
 boundary users read -id=<u_...> -format=json | jq '.item.name'

@@ -60,10 +60,10 @@ max_ttl_seconds     = 3600  # 1 hour
 # -----------------------------------------------------------------------------
 
 # Boundary cluster
-boundary_addr = "https://30bf44c61-5e709ad9254d.boundary.hashicorp.cloud"
+boundary_addr = "https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud"
 
 # Boundary admin credentials (for Terraform provider auth)
-# boundary_auth_method_id         = "ampw_XXXXXXXXXX"
+# boundary_auth_method_id         = "ampw_XXXXXXXXXX"   # the INITIAL global password method — see autoscaling/MANUAL-WALKTHROUGH.md A1
 # boundary_auth_method_login_name = "admin"
 # boundary_auth_method_password   = "your-password-here"
 
@@ -82,8 +82,9 @@ project_description = "EKS cluster access via Boundary and Vault dynamic credent
 # EKS target (from terraform output)
 # eks_api_endpoint = "https://XXXXX.gr7.ap-southeast-1.eks.amazonaws.com"
 
-# Worker filter for routing through VPC worker
-boundary_worker_filter = "\"eks-vpc-worker\" in \"/name\""
+# Worker filter for routing through VPC workers — the hand-registered worker
+# and every ASG worker carry tag type=eks in worker.hcl
+boundary_worker_filter = "\"eks\" in \"/tags/type\""
 
 # Okta group names (must match your Okta configuration)
 okta_viewer_group   = "eks-viewers"

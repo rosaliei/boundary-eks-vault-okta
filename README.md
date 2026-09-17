@@ -156,7 +156,7 @@ two differ, the drawing is the truth and the code has drifted.
 
 ## Reference values
 
-Live environment as of **2026-09-15**. Everything except the region, cluster
+Live environment as of **2026-09-17**. Everything except the region, cluster
 name, Boundary cluster and Okta auth method is regenerated on a rebuild —
 re-read ids from `terraform output` and `boundary targets list` rather than
 trusting this table.
@@ -177,9 +177,9 @@ trusting this table.
 |---|---|
 | Cluster | `https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud` |
 | Org / project | `o_cr9ncHM3kS` (kst-devops) / `p_UMfkhp0pCv` (linux) |
-| Global password auth method | `ampw_WNbi76VghW` |
-| Okta OIDC auth method | `amoidc_eY8ldrT0GG` (HC OKTA) — client `0oa174q3bo5aaqXHr698` |
-| Self-managed worker | `kst-eks-ap-southeast-1-worker-01` — `w_K3RyLndlV4`, v1.0.1+ent, tags `type=[eks, vpc, private, k8s_vault]` |
+| Global password auth method | `ampw_WNbi76VghW` — the *initial* method; the `admin`, `worker-registrar` and `worker-deregistrar` **accounts** all live on it. Never create a second password method for the brokers — see [`autoscaling/MANUAL-WALKTHROUGH.md`](autoscaling/MANUAL-WALKTHROUGH.md) A1 for the recovery from exactly that slip |
+| Okta OIDC auth method | `amoidc_eY8ldrT0GG` (HC OKTA) — client `0oa174q3bo5aaqXHr698`, primary for the org |
+| Self-managed worker | `kst-eks-ap-southeast-1-worker-01` — `w_K3RyLndlV4`, v1.0.1+ent, tags `type=[eks, vpc, private]` — first member of the ASG worker pool, retired in [autoscaling step 10](autoscaling/README.md) |
 | Vault credential store | `csvlt_xEcOfrT5Sx` — `worker_filter "eks" in "/tags/type"` |
 
 ### Access tiers — one target, one credential, one RBAC role each
@@ -192,7 +192,11 @@ trusting this table.
 
 Grants are pinned per tier — e.g. viewer:
 `ids=ttcp_d9cw5TgQOO;type=target;actions=list,no-op,authorize-session`.
-All targets: `egress_worker_filter "k8s_vault" in "/tags/type"`.
+All targets and the credential store: `worker_filter "eks" in "/tags/type"`.
+Every egress worker — the hand-registered one and every ASG worker — carries
+`type=eks` in its `worker.hcl` tags, so this one filter is the whole pool.
+(They used to filter on the older `k8s_vault` tag / the worker name; ASG
+workers carry neither, so the filter was unified on `eks`.)
 
 ---
 
@@ -783,8 +787,11 @@ Known-weak by design in this build, and what changes for production:
 **Roadmap**
 
 - Workers as a self-registering pool on an Auto Scaling Group, scaled by
-  Datadog session counts through GitHub Actions — built, documented in
-  [`autoscaling/`](autoscaling/), pending first apply.
+  Datadog session counts through GitHub Actions — built and walked through by
+  hand up to part C of [`autoscaling/MANUAL-WALKTHROUGH.md`](autoscaling/MANUAL-WALKTHROUGH.md);
+  Datadog/GitHub wiring (D–G) and the Terraform adoption of the hand-made
+  objects are the remaining steps, both documented in
+  [`autoscaling/README.md`](autoscaling/README.md).
 - Vault to HCP Vault Dedicated with a private HVN endpoint, removing dev mode.
 - Session recording on the Boundary targets for a full audit trail.
 

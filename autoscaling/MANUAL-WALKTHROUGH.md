@@ -22,16 +22,45 @@ Constants used below:
 | | |
 |---|---|
 | HCP Boundary | `https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud` |
-| Boundary global password auth method | `ampw_WNbi76VghW` |
+| Boundary global password auth method | `ampw_WNbi76VghW` — the *initial* one ("Generated global scope initial password auth method"). The admin account lives here, the two broker accounts get created here in A1, and the Terraform provider + rotate workflow authenticate against it. ONE method for all three. |
+| Boundary Okta OIDC auth method (org scope, primary) | `amoidc_eY8ldrT0GG` — used in part F and by humans; unrelated to the workers |
 | Vault (from inside the VPC) | `http://aa837cd050a9d43028df5e6987267f93-d3fb677640c1fdfb.elb.ap-southeast-1.amazonaws.com:8200` |
 | AWS account / region | `173310766280` / `ap-southeast-1` |
 | VPC | `10.0.0.0/16`, private subnets `10.0.1-3.0/24` |
+| Worker tag the targets filter on | `type=eks` — carried by the hand-registered worker (`kst-eks-ap-southeast-1-worker-01`) and every ASG worker, so all of them are one pool |
 
 ---
 
 ## A — Identities
 
-### A1. Boundary UI: two broker users, one verb each
+### A1. Boundary UI: two broker accounts on the EXISTING method, one verb each
+
+> **Account ≠ auth method — this is the one place this walkthrough was done
+> wrong once already.** The brokers are **Accounts** created *inside* the
+> existing global password method `ampw_WNbi76VghW` (Auth Methods → that method
+> → **Accounts** tab → New). Do **not** use *Auth Methods → New* — that creates
+> a separate login realm, splits the two brokers across two realms the
+> Terraform and the rotation workflow cannot address, and leaves the docs,
+> the Vault secrets and `rotate-broker-creds.yml` pointing at an id you then
+> have to chase. One auth method, three accounts on it: `admin`,
+> `worker-registrar`, `worker-deregistrar`.
+>
+> **Recovery if two stray auth methods already exist** (as found live on
+> 2026-09-17: `ampw_ARewCYhH63` "worker-registrar", `ampw_DYtMf796Nf`
+> "worker-deregistrar"): recreate the accounts on `ampw_WNbi76VghW` per this
+> section, re-point the two Vault KV secrets at it (A2 step 4 with
+> `auth_method_id=ampw_WNbi76VghW`), log in once as each broker to prove the
+> logins work, then empty the stray methods of accounts and delete them:
+>
+> ```bash
+> export BOUNDARY_ADDR=https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud
+> boundary auth-methods list -scope-id global -format json | jq -r '.items[] | "\(.id)\t\(.name)"'
+> boundary accounts list -scope-id global -format json | jq -r '.items[] | "\(.id)\t\(.auth_method_id)\t\(.login_name)"'
+> # for each account still on the stray methods:
+> boundary accounts delete -id acct_xxxx
+> boundary auth-methods delete -id ampw_ARewCYhH63
+> boundary auth-methods delete -id ampw_DYtMf796Nf
+> ```
 
 Log in to the Boundary admin UI as `admin` (password auth). Stay in the
 **Global** scope for all of this — workers are global resources.
@@ -66,7 +95,7 @@ draw.
 kubectl -n vault port-forward svc/vault 8200:8200 &
 export VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=<root/admin token>
 
-# 1. the auth method EC2 will use
+# 1. the auth method EC2 will use (skip if `vault auth list` already shows aws/)
 vault auth enable aws
 
 # 2. what each role may read
@@ -173,7 +202,7 @@ Put the `ami-…` into `/boundary-worker/ami_id` (B1).
 | Storage | 20 GiB gp3, encrypted |
 | Advanced → IAM instance profile | `boundary-asg-worker` |
 | Advanced → Metadata version | **V2 only (token required)**, hop limit 1, *Allow tags in metadata: Enable* |
-| Advanced → User data | paste `autoscaling/asg/user-data.sh.tpl` with the `${…}` filled in by hand — cluster id, Vault NLB, region, `boundary-workers`, hook name `boundary-worker-deregister`, the SSM parameter name, site |
+| Advanced → User data | paste `autoscaling/asg/user-data.sh.tpl` with the `${…}` filled in by hand — Boundary addr, cluster id, Vault NLB, region, `boundary-workers`, hook name `boundary-worker-deregister`, the SSM parameter name, Datadog site |
 
 User-data does only three things: writes `/etc/boundary/env`, writes the Datadog
 API key into `datadog.yaml`, starts the units. Read it once; it is 30 lines.
@@ -414,7 +443,7 @@ Open four windows: Datadog dashboard, Boundary UI **Workers**, AWS ASG
 **Activity**, GitHub **Actions**. Then from your laptop:
 
 ```bash
-boundary authenticate oidc -auth-method-id <amoidc_…>
+boundary authenticate oidc -auth-method-id amoidc_eY8ldrT0GG
 cd autoscaling/scripts && ./loadtest.sh 25 ttcp_d9cw5TgQOO 15m
 ```
 
@@ -472,7 +501,7 @@ Two experiments worth doing while you are here:
 
 | Box | You made it in |
 |---|---|
-| Boundary: `worker-registrar`, `worker-deregistrar` (1 grant each) | A1 |
+| Boundary: broker accounts `worker-registrar`, `worker-deregistrar` on `ampw_WNbi76VghW`, 1 grant each | A1 |
 | Vault: `auth/aws`, roles `boundary-worker-register/deregister`, 2 policies, 2 KV secrets | A2 |
 | IAM role `boundary-asg-worker` — the string both Vault and EC2 agree on | B2 ↔ A2 |
 | Launch template (AMI + user-data) → ASG `boundary-workers` + hook `boundary-worker-deregister` | B5, B6 |

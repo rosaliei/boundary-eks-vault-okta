@@ -2,9 +2,12 @@
 # Bakes a Boundary worker AMI. Nothing here is instance-specific; the three
 # scripts read /etc/boundary/env (written by user-data) at boot.
 
+# AL2023 ships curl-minimal, which already provides the curl binary. Asking
+# dnf for "curl" tries to replace it with the full package and fails on a
+# package conflict - so curl is deliberately not in this list.
 - name: Base packages
   ansible.builtin.dnf:
-    name: [unzip, jq, curl]
+    name: [unzip, jq]
     state: present
 
 # --- Boundary Enterprise -----------------------------------------------------

@@ -34,8 +34,31 @@ Changed in the existing code (one file):
 
 - `boundary/variables.tf` — `boundary_worker_filter` default is now
   `"eks" in "/tags/type"` (a tag) instead of a worker name. Autoscaled workers
-  have generated names; they all carry tag `type=eks`. The live targets already
-  use a tag filter, so nothing to apply right now.
+  have generated names; they all carry tag `type=eks`. The hand-registered
+  worker `kst-eks-ap-southeast-1-worker-01` carries it too
+  (`aws/boundary-worker.tf` sets `type = ["eks", "vpc", "private"]`), so one
+  filter selects the original worker and the whole pool.
+
+**One thing to do live (the code default does not change the running cluster).**
+The targets and the Vault credential store were built when the filter matched
+the older tag vocabulary (`"k8s_vault" in "/tags/type"`) or the worker name.
+ASG workers carry neither, so until this is updated they would serve no
+sessions. In the Boundary UI — or by CLI — set the **Egress Worker Filter** of
+`eks-api-viewer`, `eks-api-operator`, `eks-api-admin` **and** the worker filter
+of the `vault` credential store to:
+
+```
+"eks" in "/tags/type"
+```
+
+```bash
+export BOUNDARY_ADDR=https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud
+boundary authenticate                                  # as admin
+for T in ttcp_d9cw5TgQOO ttcp_jeFYI2LB06 ttcp_oZ4UOSIoXm; do
+  boundary targets update tcp -id $T -egress-worker-filter '"eks" in "/tags/type"'
+done
+boundary credential-stores update vault -id csvlt_xEcOfrT5Sx -worker-filter '"eks" in "/tags/type"'
+```
 
 The single hand-registered worker in `aws/boundary-worker.tf` keeps
 running until step 10.
@@ -52,7 +75,11 @@ export AWS_PROFILE=hc-lab
 export BOUNDARY_ADDR=https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud
 
 aws sts get-caller-identity --query Account --output text        # -> aws_account_id
-boundary auth-methods list -scope-id global -format json | jq -r '.items[] | select(.type=="password") | .id'   # -> ampw_...
+# The INITIAL password method (admin + both broker accounts live on it).
+# If this prints more than one line you still have the stray broker auth
+# methods from the A1 slip - clean them up first (see MANUAL-WALKTHROUGH A1).
+boundary auth-methods list -scope-id global -format json \
+  | jq -r '.items[] | select(.type=="password") | select(.name | startswith("Generated global scope initial")) | .id'   # -> ampw_WNbi76VghW
 kubectl -n vault get svc vault -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'   # -> Vault NLB host
 ```
 
@@ -61,6 +88,42 @@ Write them down; steps 2 and 5 use them.
 ---
 
 ## Step 2 — brokers: Boundary users + Vault roles (laptop)
+
+> **Did MANUAL-WALKTHROUGH A by hand already? Then these objects exist and this
+> apply would collide with them** (duplicate `aws/` mount in Vault, duplicate
+> `worker-registrar` login name in Boundary). Two ways forward:
+>
+> - **Keep the hand-built objects** (the walkthrough path): do *not* apply this
+>   module now. Everything in D–G only needs the objects to *exist*; the ids in
+>   the walkthrough's constants table are the live truth.
+> - **Adopt it into Terraform** (needed before `rotate-broker-creds.yml` or an
+>   unattended `infra.yml` apply can own rotation): delete the hand-made Vault
+>   pieces and import or recreate, then apply once. The cheap, clean sequence,
+>   from the walkthrough's end state (one password method, two broker accounts
+>   on it, port-forward running):
+>
+>   ```bash
+>   # Vault: remove the hand-made aws mount + policies + KV entries (TF recreates all)
+>   vault auth disable aws/
+>   vault policy delete boundary-worker-registrar
+>   vault policy delete boundary-worker-deregistrar
+>   vault kv metadata delete secret/boundary/registrar
+>   vault kv metadata delete secret/boundary/deregistrar
+>   # Boundary: the users/roles you made in A1 collide by name -> delete them
+>   # (the accounts on ampw_WNbi76VghW are what TF will re-create)
+>   boundary roles delete -id r_...        # worker-registrar / worker-deregistrar roles
+>   boundary users delete -id u_...        # and their users
+>   boundary accounts delete -id acct_...  # and the accounts
+>
+>   cd autoscaling/brokers
+>   cp terraform.tfvars.example terraform.tfvars   # ampw_ id, admin login/password, aws_account_id
+>   terraform init && terraform plan && terraform apply
+>   ```
+>
+>   Prefer importing over deleting? `terraform import vault_auth_backend.aws aws`,
+>   `terraform import "boundary_account_password.broker[\"registrar\"]" acct_…`,
+>   same for users/roles/policies/KV secrets — but `random_password` imports the
+>   password result, so deletion + recreate is genuinely simpler here.
 
 This module talks to Boundary (admin) and to Vault. Vault is in-cluster, so
 port-forward first.
@@ -255,7 +318,7 @@ Datadog job has no such dependency.
 ## Step 9 — load test
 
 ```bash
-boundary authenticate oidc -auth-method-id <amoidc_…>      # any user allowed on a target
+boundary authenticate oidc -auth-method-id amoidc_eY8ldrT0GG   # Okta - any user allowed on a target
 cd autoscaling/scripts
 ./loadtest.sh 25 ttcp_d9cw5TgQOO 12m
 ```

@@ -244,9 +244,11 @@ Drawn as scene 5, linked at the top of this page.
   (`r_mAiKdBC8gx`) still grant `authorize-session` on **every** target to
   Google-auth users — including your own Google login. Strip the
   `type=target` line or delete them.
-- `boundary/` Terraform expects project `eks-access`, project-scoped roles and
-  a name-based worker filter. Live is project `linux`, org-scoped roles, tag
-  filters. Either `terraform import` the live objects or accept the drift.
+- `boundary/` Terraform expects project `eks-access` and project-scoped roles.
+  Live is project `linux` with org-scoped role grants. The worker filter is no
+  longer part of the drift — `boundary/variables.tf` now defaults to the same
+  tag filter the live targets use. Either `terraform import` the rest or accept
+  the drift.
 - Node security-group rules for the Vault NLB NodePorts (30773, 32531 from
   0.0.0.0/0) are added by the in-tree cloud controller and are not in
   Terraform. Narrow with `spec.loadBalancerSourceRanges` if wanted.
@@ -255,6 +257,43 @@ Drawn as scene 5, linked at the top of this page.
 hostname · every filter is a tag filter · each target has exactly one library ·
 every `authorize-session` grant is pinned to a target id · worker version ≤ HCP
 controller · `--profile hc-lab`.
+
+---
+
+## Found during the autoscaling walkthrough (2026-09-17)
+
+Two misalignments surfaced while walking [`autoscaling/MANUAL-WALKTHROUGH.md`](autoscaling/MANUAL-WALKTHROUGH.md)
+A–C by hand.
+
+**1. Two auth methods created where two accounts were needed.** In step A1 the
+brokers were made as *auth methods* instead of *accounts on the existing
+method*. Live global scope ended up with three password methods:
+
+| id | name | what it actually is |
+|---|---|---|
+| `ampw_WNbi76VghW` | Generated global scope initial password auth method | the real one — `admin` lives here, and this is what the Terraform provider, `brokers/` and `rotate-broker-creds.yml` authenticate against |
+| `ampw_ARewCYhH63` | worker-registrar | a stray login realm — the Vault KV `registrar` secret pointed here (v3) |
+| `ampw_DYtMf796Nf` | worker-deregistrar | same |
+
+Why it matters: the brokers ended up in two realms that share nothing with the
+admin's method, so one `boundary_auth_method_id` can no longer address both —
+exactly what `autoscaling/brokers` and the weekly rotation workflow assume —
+and every doc referenced the original id while the secrets pointed at the new
+one. Fix: create `worker-registrar` / `worker-deregistrar` as **accounts** on
+`ampw_WNbi76VghW`, wire them to the users, re-put both KV secrets with
+`auth_method_id=ampw_WNbi76VghW`, prove both logins, then delete the two stray
+methods (accounts first — Boundary refuses to delete a non-empty method).
+Documented as the recovery box in walkthrough A1.
+
+**2. Worker-tag vocabulary drift.** The credential store and targets were
+built filtering on `"k8s_vault" in "/tags/type"` (earlier still: the worker's
+registered *name*). The ASG workers carry `type = ["eks","vpc","private","asg"]`
+— no `k8s_vault` — so under the old filters every autoscaled worker would be
+filtered out of every session while looking perfectly healthy in the UI.
+Unified on one tag: `"eks" in "/tags/type"` on all three per-tier targets and
+the credential store; it matches `kst-eks-ap-southeast-1-worker-01`
+(`type=[eks,vpc,private]`) and the whole pool. Commands in
+[`autoscaling/README.md`](autoscaling/README.md) step 0.
 
 ---
 
@@ -267,7 +306,7 @@ Symptoms actually hit while building this, and their causes:
 | `unsupported Kubernetes version 1.29` | Version out of EKS support. `aws eks describe-cluster-versions` lists creatable ones |
 | `name_prefix ... (1 - 38), got ...` | Node group IAM role name too long — set `iam_role_name` + `iam_role_use_name_prefix = false` |
 | Worker crash-loops, `config cannot contain name or description` | `name` in `worker.hcl` with activation-token auth — set it via `-name` at registration |
-| `No egress workers can handle this session` | Target's egress filter does not match the worker's registered name |
+| `No egress workers can handle this session` | Target's egress filter matches no worker — filter is `"eks" in "/tags/type"`; check the worker's `worker.hcl` tags |
 | `failed to create a service account token ... forbidden` | Step 3b missing — `auth-delegator` is not enough |
 | Okta `invalid_scope` | Requesting `groups` from a custom authorization server that has no such scope |
 | Okta `Policy evaluation failed` | Custom authorization server has no Access Policy permitting the client |
