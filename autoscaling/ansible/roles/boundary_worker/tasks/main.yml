@@ -33,7 +33,7 @@
     mode: "0644"
 
 - name: Read expected Vault checksum
-  ansible.builtin.shell: grep 'linux_amd64.zip' /tmp/vault_SHA256SUMS | awk '{print $1}'
+  ansible.builtin.shell: awk '$2 == "vault_{{ vault_version }}_linux_amd64.zip" {print $1}' /tmp/vault_SHA256SUMS
   register: vault_sum
   changed_when: false
 
@@ -119,10 +119,27 @@
 # written into datadog.yaml then; it is never baked into the image.
 - name: Install Datadog Agent 7 (install-only)
   ansible.builtin.shell: |
-    DD_API_KEY=00000000000000000000000000000000 DD_SITE={{ datadog_site }} DD_INSTALL_ONLY=true \
-      bash -c "$(curl -L https://install.datadoghq.com/scripts/install_script_agent7.sh)"
+    set -o pipefail
+    curl -fsSL https://install.datadoghq.com/scripts/install_script_agent7.sh -o /tmp/dd-install.sh
+    DD_API_KEY=0123456789abcdef0123456789abcdef DD_SITE={{ datadog_site }} DD_INSTALL_ONLY=true \
+      bash /tmp/dd-install.sh
   args:
     creates: /opt/datadog-agent/bin/agent/agent
+    executable: /bin/bash
+  register: dd_install
+  failed_when: dd_install.rc != 0
+
+
+- name: Datadog check directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: dd-agent
+    group: dd-agent
+    mode: "0755"
+  loop:
+    - /etc/datadog-agent/checks.d
+    - /etc/datadog-agent/conf.d/boundary_worker.d
 
 - name: Datadog custom check
   ansible.builtin.copy:
