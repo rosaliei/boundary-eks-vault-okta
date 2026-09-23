@@ -103,7 +103,7 @@ could draw it from memory, and only then was automated.** Every diagram is
 mine, drawn in Excalidraw as I went. The code is the *output* of that
 understanding, not a substitute for it.
 
-The five drawings below are my heart work — sketched by hand while each layer
+The six drawings below are my heart work — sketched by hand while each layer
 went up, not generated and not copied. Each one is the map I used to force the
 details into my head, and it shows more of how I learn than any bullet list
 could:
@@ -120,6 +120,13 @@ could:
    per tier
 5. [Issues — what broke and why](https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P) —
    the failures from the real build, each with *seen / cause / fix*
+6. [Autoscaling](https://app.excalidraw.com/s/9hD7S5FgGWN/1Vd6jSI6hbf) — the
+   worker pool: session metric, monitors, the scale-out and scale-in paths
+
+<p align="center">
+  <a href="https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P"><img src="docs/boards/issues-board.jpg" alt="Board 5: every failure found before autoscaling, grouped by component — HCP Boundary control plane, roles and targets, worker EC2, Vault and the internal NLB — each card giving what was seen, the cause, and the fix" width="520"></a><br>
+  <sub><b>Board 5</b> — what broke, why, and the fix. <a href="https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P">Open full size</a></sub>
+</p>
 
 Scene rule: do the layer by hand once, watch it work, then apply the
 automation and confirm it produces the same objects. If the two differ, the
