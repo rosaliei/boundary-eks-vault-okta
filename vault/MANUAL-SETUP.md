@@ -106,7 +106,9 @@ Vault also needs `system:auth-delegator` if you later enable the Kubernetes
 
 ## 3. Reach Vault from your laptop
 
-Vault has no public endpoint — it is a ClusterIP service in a private cluster.
+Vault has no public endpoint. In-cluster clients use the ClusterIP service;
+the Boundary workers reach it over an INTERNAL NLB (`vault-nlb`), which is what
+`vault_addr` points at. Neither is reachable from outside the VPC.
 
 ```bash
 kubectl -n vault port-forward svc/vault 8200:8200

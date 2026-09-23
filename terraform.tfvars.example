@@ -63,7 +63,7 @@ max_ttl_seconds     = 3600  # 1 hour
 boundary_addr = "https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud"
 
 # Boundary admin credentials (for Terraform provider auth)
-# boundary_auth_method_id         = "ampw_XXXXXXXXXX"   # the INITIAL global password method — see autoscaling/MANUAL-WALKTHROUGH.md A1
+# boundary_auth_method_id         = "ampw_XXXXXXXXXX"   # the INITIAL global password method — see autoscaling/01-Build-By-Hand.md A1
 # boundary_auth_method_login_name = "admin"
 # boundary_auth_method_password   = "your-password-here"
 

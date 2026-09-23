@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1180" width="1440" height="1180" role="img" aria-label="Integration map: the exact mechanism joining Okta, Boundary, Vault, EKS, AWS, Datadog and GitHub Actions">
+<defs>
+<marker id="m-7a3fa0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7a3fa0"/></marker>
+<marker id="m-2b5f8e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2b5f8e"/></marker>
+<marker id="m-b4530a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#b4530a"/></marker>
+<marker id="m-2f7d5d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2f7d5d"/></marker>
+</defs>
+<rect x="0" y="0" width="1440" height="1180" rx="0" fill="#fcfcfb" stroke="#fcfcfb" stroke-width="1"/>
+<text x="46" y="40" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="21" fill="#1c1b19" font-weight="bold" text-anchor="start">Integration map</text>
+<text x="46" y="62" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#6f6b64" font-weight="normal" text-anchor="start">System to system: what each component calls, and what it presents to be allowed to</text>
+<line x1="46" y1="88" x2="72" y2="88" stroke="#7a3fa0" stroke-width="2.8"/>
+<text x="79" y="92" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">identity is proved, no secret sent</text>
+<line x1="333.4" y1="88" x2="359.4" y2="88" stroke="#2b5f8e" stroke-width="2.8"/>
+<text x="366.4" y="92" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">a credential is issued or read</text>
+<line x1="594.4" y1="88" x2="620.4" y2="88" stroke="#b4530a" stroke-width="2.8"/>
+<text x="627.4" y="92" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">session bytes</text>
+<line x1="743.2" y1="88" x2="769.2" y2="88" stroke="#2f7d5d" stroke-width="2.8"/>
+<text x="776.2" y="92" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">control plane / automation</text>
+<rect x="46" y="140" width="268" height="118" rx="12" fill="#ffffff" stroke="#c3aed4" stroke-width="1.4"/>
+<text x="64" y="166" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">IDENTITY PROVIDER</text>
+<text x="64" y="190" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" fill="#1c1b19" font-weight="bold" text-anchor="start">Okta</text>
+<text x="64" y="212" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">OIDC provider for Boundary</text>
+<text x="64" y="227" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">groups claim: k8s-viewers,</text>
+<text x="64" y="242" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">k8s-operators, k8s-admins</text>
+<rect x="560" y="140" width="300" height="138" rx="12" fill="#ffffff" stroke="#e0b9b5" stroke-width="1.4"/>
+<text x="578" y="166" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">PRIVILEGED ACCESS</text>
+<text x="578" y="190" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" fill="#1c1b19" font-weight="bold" text-anchor="start">HCP Boundary</text>
+<text x="578" y="212" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">authorizes every session</text>
+<text x="578" y="227" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">brokers its credential</text>
+<text x="578" y="242" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">holds the worker registry</text>
+<rect x="1110" y="140" width="284" height="158" rx="12" fill="#ffffff" stroke="#b9c9d8" stroke-width="1.4"/>
+<text x="1128" y="166" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">SECRETS</text>
+<text x="1128" y="190" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" fill="#1c1b19" font-weight="bold" text-anchor="start">HashiCorp Vault</text>
+<text x="1128" y="212" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">kubernetes secrets engine</text>
+<text x="1128" y="227" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">aws auth method</text>
+<text x="1128" y="242" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">kv: the two broker logins</text>
+<rect x="560" y="452" width="300" height="176" rx="12" fill="#ffffff" stroke="#c9b9a4" stroke-width="1.4"/>
+<text x="578" y="478" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">PROXY  ·  EC2 IN THE ASG</text>
+<text x="578" y="502" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" fill="#1c1b19" font-weight="bold" text-anchor="start">Boundary worker</text>
+<text x="578" y="524" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">boundary server</text>
+<text x="578" y="539" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">+ Datadog agent</text>
+<text x="578" y="554" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">+ register / lifecycle /</text>
+<text x="578" y="569" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">  protect / logperm units</text>
+<rect x="1110" y="452" width="284" height="138" rx="12" fill="#ffffff" stroke="#b9c9d8" stroke-width="1.4"/>
+<text x="1128" y="478" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">WORKLOAD</text>
+<text x="1128" y="502" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" fill="#1c1b19" font-weight="bold" text-anchor="start">Amazon EKS</text>
+<text x="1128" y="524" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">private API endpoint</text>
+<text x="1128" y="539" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">RBAC per ServiceAccount</text>
+<text x="1128" y="554" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">OIDC issuer for the SA token</text>
+<rect x="46" y="452" width="300" height="176" rx="12" fill="#ffffff" stroke="#c9b9a4" stroke-width="1.4"/>
+<text x="64" y="478" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">CLOUD</text>
+<text x="64" y="502" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" fill="#1c1b19" font-weight="bold" text-anchor="start">AWS</text>
+<text x="64" y="524" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">IAM instance profile</text>
+<text x="64" y="539" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">SSM Parameter Store</text>
+<text x="64" y="554" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">Auto Scaling group + hook</text>
+<rect x="560" y="790" width="300" height="130" rx="12" fill="#ffffff" stroke="#bcd8c9" stroke-width="1.4"/>
+<text x="578" y="816" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">OBSERVABILITY</text>
+<text x="578" y="840" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" fill="#1c1b19" font-weight="bold" text-anchor="start">Datadog</text>
+<text x="578" y="862" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">custom check + monitors</text>
+<text x="578" y="877" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">webhook integration</text>
+<rect x="1110" y="790" width="284" height="130" rx="12" fill="#ffffff" stroke="#bcd8c9" stroke-width="1.4"/>
+<text x="1128" y="816" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">AUTOMATION</text>
+<text x="1128" y="840" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" fill="#1c1b19" font-weight="bold" text-anchor="start">GitHub Actions</text>
+<text x="1128" y="862" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">scale-workers</text>
+<text x="1128" y="877" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">ami-build</text>
+<path d="M 314 196 L 554 196" fill="none" stroke="#7a3fa0" stroke-width="2.0" marker-end="url(#m-7a3fa0)"/>
+<rect x="290" y="151" width="288" height="32" rx="4" fill="#fcfcfb" fill-opacity="0.94"/>
+<text x="434" y="162" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="9.5" fill="#7a3fa0" font-weight="bold" text-anchor="middle">OIDC authorization code flow</text>
+<text x="434" y="175" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="middle">Boundary reads the groups claim to pick a role</text>
+<path d="M 860 196 L 1104 196" fill="none" stroke="#2b5f8e" stroke-width="2.0" marker-end="url(#m-2b5f8e)"/>
+<rect x="856" y="151" width="252" height="32" rx="4" fill="#fcfcfb" fill-opacity="0.94"/>
+<text x="982" y="162" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="9.5" fill="#2b5f8e" font-weight="bold" text-anchor="middle">credential library, Vault token</text>
+<text x="982" y="175" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="middle">reads secret/data/boundary/* per session</text>
+<path d="M 1252 302 L 1252 446" fill="none" stroke="#2b5f8e" stroke-width="2.0" marker-end="url(#m-2b5f8e)"/>
+<rect x="1268" y="339" width="132" height="45" rx="4" fill="#fcfcfb" fill-opacity="0.94"/>
+<text x="1268" y="350" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="9.5" fill="#2b5f8e" font-weight="bold" text-anchor="start">TokenRequest API</text>
+<text x="1268" y="363" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">mints a 15-minute</text>
+<text x="1268" y="376" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">ServiceAccount token</text>
+<path d="M 686 448 L 686 282" fill="none" stroke="#7a3fa0" stroke-width="2.0" marker-end="url(#m-7a3fa0)"/>
+<rect x="702" y="333" width="210" height="32" rx="4" fill="#fcfcfb" fill-opacity="0.94"/>
+<text x="702" y="344" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="9.5" fill="#7a3fa0" font-weight="bold" text-anchor="start">boundary workers create | delete</text>
+<text x="702" y="357" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">password login read from Vault KV</text>
+<path d="M 864 486 L 980 486 L 980 330 L 1104 330" fill="none" stroke="#7a3fa0" stroke-width="2.0" stroke-dasharray="6 4" marker-end="url(#m-7a3fa0)"/>
+<rect x="996" y="385" width="216" height="45" rx="4" fill="#fcfcfb" fill-opacity="0.94"/>
+<text x="996" y="396" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="9.5" fill="#7a3fa0" font-weight="bold" text-anchor="start">vault login -method=aws</text>
+<text x="996" y="409" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">signed sts:GetCallerIdentity,</text>
+<text x="996" y="422" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">matched on bound_iam_principal_arn</text>
+<path d="M 864 556 L 1104 556" fill="none" stroke="#b4530a" stroke-width="2.0" marker-end="url(#m-b4530a)"/>
+<rect x="903" y="511" width="162" height="32" rx="4" fill="#fcfcfb" fill-opacity="0.94"/>
+<text x="984" y="522" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="9.5" fill="#b4530a" font-weight="bold" text-anchor="middle">TCP proxy to :443</text>
+<text x="984" y="535" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="middle">relays TLS it cannot read</text>
+<path d="M 556 500 L 350 500" fill="none" stroke="#2f7d5d" stroke-width="2.0" marker-end="url(#m-2f7d5d)"/>
+<rect x="330" y="441" width="246" height="45" rx="4" fill="#fcfcfb" fill-opacity="0.94"/>
+<text x="453" y="452" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="9.5" fill="#2f7d5d" font-weight="bold" text-anchor="middle">instance profile</text>
+<text x="453" y="465" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="middle">CompleteLifecycleAction,</text>
+<text x="453" y="478" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="middle">SetInstanceProtection, ssm:GetParameter</text>
+<path d="M 350 590 L 556 590" fill="none" stroke="#2f7d5d" stroke-width="2.0" marker-end="url(#m-2f7d5d)"/>
+<rect x="354" y="607" width="198" height="32" rx="4" fill="#fcfcfb" fill-opacity="0.94"/>
+<text x="453" y="618" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="9.5" fill="#2f7d5d" font-weight="bold" text-anchor="middle">ASG launch template</text>
+<text x="453" y="631" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="middle">+ EC2_INSTANCE_TERMINATING hook</text>
+<path d="M 686 632 L 686 786" fill="none" stroke="#2f7d5d" stroke-width="2.0" marker-end="url(#m-2f7d5d)"/>
+<rect x="702" y="677" width="198" height="45" rx="4" fill="#fcfcfb" fill-opacity="0.94"/>
+<text x="702" y="688" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="9.5" fill="#2f7d5d" font-weight="bold" text-anchor="start">agent posts the gauge</text>
+<text x="702" y="701" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">boundary.worker.active_sessions</text>
+<text x="702" y="714" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">API key read from SSM at boot</text>
+<path d="M 860 856 L 1104 856" fill="none" stroke="#2f7d5d" stroke-width="2.0" marker-end="url(#m-2f7d5d)"/>
+<rect x="886" y="811" width="192" height="45" rx="4" fill="#fcfcfb" fill-opacity="0.94"/>
+<text x="982" y="822" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="9.5" fill="#2f7d5d" font-weight="bold" text-anchor="middle">webhook POST</text>
+<text x="982" y="835" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="middle">/repos/:owner/:repo/dispatches</text>
+<text x="982" y="848" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="middle">fine-grained PAT in a header</text>
+<path d="M 1252 924 L 1252 990 L 196 990 L 196 632" fill="none" stroke="#2f7d5d" stroke-width="2.0" stroke-dasharray="6 4" marker-end="url(#m-2f7d5d)"/>
+<rect x="523" y="997" width="402" height="32" rx="4" fill="#fcfcfb" fill-opacity="0.94"/>
+<text x="724" y="1008" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="9.5" fill="#2f7d5d" font-weight="bold" text-anchor="middle">sts:AssumeRoleWithWebIdentity  →  autoscaling:SetDesiredCapacity</text>
+<text x="724" y="1021" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="middle">OIDC sub carries numeric ids: repo:owner@40911856/repo@1358281041</text>
+<rect x="46" y="1032" width="1348" height="118" rx="12" fill="#f5f2ec" stroke="#d8d4cc" stroke-width="1"/>
+<text x="70" y="1058" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">THE PROPERTY WORTH NOTICING</text>
+<text x="70" y="1084" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" fill="#1c1b19" font-weight="bold" text-anchor="start">Not one of these arrows carries a password that was stored somewhere for it.</text>
+<text x="70" y="1108" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">Machines present what they already are — an instance profile, a signed OIDC token — and receive something short-lived in return. The Kubernetes token lives 15 minutes,</text>
+<text x="70" y="1126" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">the worker's Vault token 5, and the two broker passwords rotate weekly. Only the Datadog API key sits at rest, in SSM Parameter Store, read once at boot.</text>
+</svg>

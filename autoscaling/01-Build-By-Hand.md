@@ -1,8 +1,16 @@
 # Manual walkthrough — build the autoscaling loop by hand once
 
-Same result as the Terraform in this folder, done click by click so each
-moving part is something you have touched. Do this once, draw it, then let
-`README.md` (Terraform + GitHub Actions) own it.
+Same result as the Terraform in this folder, done click by click so each moving
+part is something you have touched. Do this once, draw it, then let
+[Build with Terraform](02-Build-With-Terraform.md) own it.
+
+[README.md](README.md) explains **why** the design is shaped this way — read it
+first if any step here looks arbitrary.
+
+> **Dependency — the base platform.** Everything here builds on the VPC, the
+> private EKS cluster, Vault's Kubernetes secrets engine and the Boundary
+> targets from [Build by hand](../01-Build-By-Hand.md). Have one
+> worker registered and a session working before you start.
 
 Every part ends with **See it** — the thing to look at that proves the step
 worked. Those are the boxes and arrows of your drawing.
@@ -89,6 +97,27 @@ line. Log out, log in as `worker-registrar` (password auth): the left nav shows
 Workers only; Targets/Sessions are empty. That is the least-privilege you will
 draw.
 
+> **Step 4 is the one that gets skipped, and a correct role hides it.** A role
+> grants to a *user*, and a user is reached through the *account* that was used
+> to log in. If the account exists on the right auth method but was never added
+> to the user, login succeeds and every action is refused — registration dies at
+> boot with `403 PermissionDenied` on `create on controller-led-type worker`
+> while the role reads as perfectly configured. `403` not `401` is the tell:
+> a valid token proves authentication, never authorization.
+>
+> Verify the whole chain, not just the role:
+>
+> ```bash
+> boundary roles read -id <role-id>                    # note its principal user id
+> boundary users read -id <user-id>                    # account_ids MUST be non-empty
+> boundary accounts read -id <account-id>              # auth_method_id == the one in Vault KV
+> ```
+>
+> The account's `auth_method_id` must equal the `auth_method_id` stored in the
+> Vault KV secret the worker reads. Two accounts with the same login name on two
+> different methods is exactly how this goes wrong. Hit on 2026-09-22 — see
+> items 1 and 9 in [`notes/Issues.md`](../notes/Issues.md).
+
 ### A2. Vault CLI: AWS auth + two roles + two secrets
 
 ```bash
@@ -167,6 +196,23 @@ Name it `boundary-worker-lifecycle`. Nothing for Vault here — `sts:GetCallerId
 **See it**: role ARN `arn:aws:iam::173310766280:role/boundary-asg-worker` — the
 same string as `ROLE_ARN` in A2. Draw that arrow.
 
+**Check the managed policy actually attached** — on the 2026-09-22 build the
+inline policy was created but `AmazonSSMManagedInstanceCore` was not, so the
+workers never appeared in Session Manager and every later problem had to be
+diagnosed from outside the box:
+
+```bash
+aws iam list-attached-role-policies --role-name boundary-asg-worker
+# expect: AmazonSSMManagedInstanceCore
+aws iam attach-role-policy --role-name boundary-asg-worker \
+  --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore   # if missing
+```
+
+`kms:Decrypt` is deliberately absent: `--with-decryption` on a SecureString
+under the default `alias/aws/ssm` key is authorised by the *key* policy via
+`kms:ViaService`, not by this role. Create the parameter in B1 with the default
+key — pick a customer-managed key and you must add `kms:Decrypt` here.
+
 ### B3. Security group
 
 **EC2 → Security Groups → Create**: name `boundary-workers-sg`, VPC = the EKS
@@ -195,17 +241,97 @@ Put the `ami-…` into `/boundary-worker/ami_id` (B1).
 | Field | Value |
 |---|---|
 | AMI | *My AMIs* → the one from B4 |
-| Instance type | `t3.micro` |
+| Instance type | `t3.small` — **not** `t3.micro`, see below |
 | Key pair | *Don't include* |
 | Subnet | *Don't include in launch template* (the ASG decides) |
 | Security group | `boundary-workers-sg` |
 | Storage | 20 GiB gp3, encrypted |
 | Advanced → IAM instance profile | `boundary-asg-worker` |
 | Advanced → Metadata version | **V2 only (token required)**, hop limit 1, *Allow tags in metadata: Enable* |
-| Advanced → User data | paste `autoscaling/asg/user-data.sh.tpl` with the `${…}` filled in by hand — Boundary addr, cluster id, Vault NLB, region, `boundary-workers`, hook name `boundary-worker-deregister`, the SSM parameter name, Datadog site |
+| Advanced → User data | the **rendered** `user-data.sh.tpl` — see below. Never paste the file as-is. |
 
 User-data does only three things: writes `/etc/boundary/env`, writes the Datadog
 API key into `datadog.yaml`, starts the units. Read it once; it is 30 lines.
+
+> **Workers go in a PUBLIC subnet with a public IP — this is load-bearing, not
+> convenience.** A worker that only dials out is reached over the multi-hop
+> reverse connection, and Boundary does not instrument that path: the session
+> metric reads 0 forever no matter how much traffic flows, so nothing can ever
+> scale. Four things have to line up, and missing any one silently returns you
+> to a flat-zero metric:
+>
+> | | |
+> |---|---|
+> | Subnet | a **public** one, with `AssociatePublicIpAddress` forced in the launch template |
+> | `public_addr` | resolved from IMDS at boot by `boundary-register.sh` — it changes per instance, so it can never be hardcoded |
+> | Security group | 9202 open to the **client's** IP, not just the VPC |
+> | Target | an `ingress_worker_filter`, not only an egress one |
+>
+> The trade is real: the workers become internet-reachable on 9202 and the SG is
+> the only thing in front of that port. See items 14-15 in [`notes/Issues.md`](../notes/Issues.md).
+>
+> ```bash
+> boundary targets update tcp -id <target-id> \
+>   -ingress-worker-filter '"eks" in "/tags/type"'
+> ```
+
+> **Size it `t3.small`, and set CPU credits to *unlimited*.** The Boundary
+> worker is a light TCP proxy, but it is not alone on the box: it holds ~470 MiB
+> RSS plus two `boundary-plugin` children, and the Datadog agent adds `agent`,
+> `trace-loader`, `agent-data-plane` and `system-probe` on top. On a `t3.micro`
+> (1 GiB) the kernel OOM-kills `boundary`, systemd restarts it every 5 s, that
+> loop holds ~52% CPU against a 10% baseline, the burst credits reach zero, and
+> the **SSM agent is starved** — so the instance also stops answering Session
+> Manager and Run Command, exactly when you need it. Measured 2026-09-23; see
+> items 10-11 in [`notes/Issues.md`](../notes/Issues.md).
+>
+> When an instance stops answering SSM, do not keep sending it commands:
+>
+> ```bash
+> aws ec2 get-console-output --instance-id <id> --latest   # needs no agent
+> ```
+
+> **Render it first — this is the single easiest step to get wrong.**
+> `user-data.sh.tpl` is a Terraform `templatefile()` template. Pasting it
+> unrendered leaves literal `${boundary_addr}` in the file, and because the
+> script runs under `set -euo pipefail` with an **unquoted** heredoc, bash
+> expands `${boundary_addr}` as a *shell* variable, finds it unset, and kills
+> user-data **on line 10** — before the SSM read, before `datadog.yaml`, before
+> any `systemctl start`. Nothing reports the failure: the ASG calls the instance
+> healthy, the Datadog agent runs (it is baked into the AMI), and the only
+> symptom is `connection refused` on `:9203` several layers away. See the
+> 2026-09-22 entry in [`notes/Issues.md`](../notes/Issues.md).
+
+Render with the eight real values, then verify nothing is left:
+
+```bash
+cd autoscaling/asg
+sed -e "s|\${boundary_addr}|https://<cluster-id>.boundary.hashicorp.cloud|g" \
+    -e "s|\${hcp_boundary_cluster_id}|<cluster-id>|g" \
+    -e "s|\${vault_addr}|http://<vault-nlb-hostname>:8200|g" \
+    -e "s|\${aws_region}|ap-southeast-1|g" \
+    -e "s|\${asg_name}|boundary-workers|g" \
+    -e "s|\${lifecycle_hook_name}|boundary-worker-deregister|g" \
+    -e "s|\${datadog_api_key_ssm_param}|/boundary-worker/datadog_api_key|g" \
+    -e "s|\${datadog_site}|datadoghq.com|g" \
+    user-data.sh.tpl > /tmp/user-data.rendered.sh
+
+# MUST print nothing. Any output here means the instance will fail to boot.
+grep -o '\${[a-z_]*}' /tmp/user-data.rendered.sh
+```
+
+Paste `/tmp/user-data.rendered.sh`. The Vault NLB hostname comes from
+`kubectl get svc -n vault` (see the note in B6 — it changes every time the
+Service is recreated).
+
+**Verify on the first instance, before moving on** — two commands that would
+have caught this immediately:
+
+```bash
+aws ssm start-session --target <instance-id>
+cat /etc/boundary/env            # every line must have a real value, not ${…}
+sudo tail -20 /var/log/cloud-init-output.log   # must not end in "unbound variable"
+```
 
 ### B6. Auto Scaling group + lifecycle hook
 
@@ -229,11 +355,40 @@ Create. Then open the group → **Instance management → Lifecycle hooks → Cr
 | Heartbeat timeout | 300 |
 | Default result | CONTINUE |
 
+**Confirm both of these — the console does not always keep what you picked:**
+
+```bash
+aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names boundary-workers \
+  --query 'AutoScalingGroups[0].{min:MinSize,max:MaxSize,desired:DesiredCapacity,lt:LaunchTemplate.Version}'
+```
+
+Expect `max: 6` and `lt: "$Latest"`. On the 2026-09-22 build this came back
+`max: 1` and `lt: "2"` — a pinned version means every later launch-template
+version is ignored, and `max: 1` makes scale-out a silent no-op (`scale.yml`
+clamps to the bound and exits green). Fix either with:
+
+```bash
+aws autoscaling update-auto-scaling-group --auto-scaling-group-name boundary-workers \
+  --max-size 6 --launch-template LaunchTemplateId=<lt-id>,Version='$Latest'
+```
+
+> **Vault's address is not stable.** `vault_addr` points at an internal NLB
+> created by a `type: LoadBalancer` Service. Delete and recreate that Service
+> and the hostname changes, which breaks every worker at registration — the
+> worker never starts, so the visible symptom is `:9203 connection refused`.
+> If the `vault` Service is `ClusterIP`, there is no address at all; expose it
+> first (`vault/MANUAL-SETUP.md`). Re-render user-data on any change.
+
 **See it**: **Activity** tab shows *Launching a new EC2 instance*. Under
 **Instance management**, one instance, lifecycle *InService*. In ~2 minutes,
 Boundary UI → **Workers** shows `worker-i-0…` — registration ran by itself
 from user-data. That is the automated path; part C does it by hand so you see
 each call.
+
+If **Workers** stays empty, do not debug Datadog — debug the boot. In order:
+`cat /etc/boundary/env` (placeholders?), `journalctl -u boundary-register`
+(Vault reachable?), `systemctl status boundary-worker` (is there a
+`worker.hcl`?). Datadog is the last link in that chain, not the first.
 
 ---
 
@@ -289,9 +444,10 @@ listener "tcp" {
   purpose = "proxy"
 }
 listener "tcp" {                     # /health for Datadog + the lifecycle script
-  address = "127.0.0.1:9203"
-  purpose = "ops"
-}
+  address     = "127.0.0.1:9203"
+  purpose     = "ops"
+  tls_disable = true                 # REQUIRED - without it Boundary exits 3:
+}                                    # "tls not disabled ... no certificate file supplied"
 
 worker {
   controller_generated_activation_token = "${ACT}"
@@ -324,7 +480,10 @@ unset BOUNDARY_TOKEN BROKER_PASS; rm /tmp/w.json
 # 7. Start the worker. It dials OUT to HCP with the activation token, once.
 systemctl start boundary-worker
 journalctl -u boundary-worker -n 20 --no-pager      # "worker has successfully authenticated"
-curl -s 'http://127.0.0.1:9203/health?worker_info=1'  # active_session_count: 0
+curl -s 'http://127.0.0.1:9203/health?worker_info=1'  # state: active, upstream: READY
+# The session count comes from /metrics, not /health - active_session_count is
+# always 0 on this build. This is the number every monitor reads:
+curl -s http://127.0.0.1:9203/metrics | grep proxy_websocket_active_connections
 ```
 
 **See it**: Boundary UI → **Workers** → your `worker-i-…` is *Active*, tags
@@ -349,13 +508,29 @@ that worker's line go to 1. Close it — back to 0. This is the signal.
 Also **Logs → Explorer** → `source:boundary` — the cloudevents from each
 worker, one line per event. This is the audit trail, not the signal.
 
-### D2. AWS integration (for the pool-size widgets)
+**If nothing ever appears**, check in this order — a healthy-looking agent
+proves very little, because the agent, `conf.d` and `checks.d` all come from
+the AMI and run fine with no valid key:
 
-**Integrations → AWS → Add AWS account** (CloudFormation quick setup is fine).
-Metric collection: tick *Auto Scaling*. This provides
-`aws.autoscaling.group_in_service_instances` / `group_desired_capacity`.
+```bash
+aws ssm start-session --target <instance-id>
+sudo datadog-agent check boundary_worker      # does the check emit a metric at all?
+sudo datadog-agent status | grep -A3 'API Keys status'
+sudo grep -c '^api_key: 0123456789abcdef' /etc/datadog-agent/datadog.yaml
+```
 
-### D3. Webhooks — the actuator
+| Symptom | Cause |
+|---|---|
+| last line prints `1` | user-data never overwrote `datadog.yaml`, so the agent is running on the **dummy key baked by Ansible** and every submission is rejected. Check `/var/log/cloud-init-output.log`. |
+| `API Keys status` says invalid | wrong key, or wrong `site` — an agent on `datadoghq.com` submitting to an `ap1` org reports healthy and arrives nowhere |
+| check runs but `Metric Samples: 0` | the worker's ops listener is down; the check returns after a CRITICAL service check **without** emitting the gauge, so you get *no data* rather than a zero. Fix the worker, not Datadog. |
+
+That last row matters for the monitors: `avg(last_15m) … < 3` with
+`notify_no_data = false` stays silent on a dead worker rather than firing. The
+`worker_stale` service check is what covers it. See items 3-4 in
+[`notes/Issues.md`](../notes/Issues.md).
+
+### D2. Webhooks — the actuator
 
 Create the GitHub token first: **GitHub → Settings → Developer settings →
 Personal access tokens → Fine-grained → Generate**: repository access = this
@@ -371,7 +546,7 @@ repo only; permissions = *Contents: Read and write*. Copy it.
 
 Save both.
 
-### D4. Two monitors
+### D3. Two monitors
 
 **Monitors → New Monitor → Metric**
 
@@ -399,7 +574,7 @@ Notifications** → state *Alert* → Run test. GitHub → **Actions** → a
 `scale-workers` run appears within seconds. That is the Datadog → GitHub arrow.
 (The run will move desired 1 → 2; put it back with `direction: in` in E.)
 
-### D5. Dashboard
+### D4. Dashboard
 
 **Dashboards → New Dashboard → New Timeboard** and add, in this order:
 
@@ -428,7 +603,7 @@ provider, condition `sub` = `repo:<owner>/<repo>:*`; inline policy allowing
 `autoscaling:DescribeAutoScalingGroups` and `autoscaling:SetDesiredCapacity`.
 
 Run the workflow by hand: **Actions → scale-workers → Run workflow →
-direction `in`** (to undo the D4 test). Open the run → the step prints
+direction `in`** (to undo the D3 test). Open the run → the step prints
 `desired: 2 -> 1`.
 
 **See it**: EC2 → Auto Scaling → `boundary-workers` → **Activity**:
@@ -444,7 +619,7 @@ Open four windows: Datadog dashboard, Boundary UI **Workers**, AWS ASG
 
 ```bash
 boundary authenticate oidc -auth-method-id amoidc_eY8ldrT0GG
-cd autoscaling/scripts && ./loadtest.sh 25 ttcp_d9cw5TgQOO 15m
+cd autoscaling/scripts && ./scale-to-workers.sh 2 ttcp_d9cw5TgQOO 25
 ```
 
 Watch, in order (times are typical):

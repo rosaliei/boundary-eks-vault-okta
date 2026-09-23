@@ -1,381 +1,172 @@
-# Boundary worker autoscaling — build guide
+# Boundary worker autoscaling — architecture
 
-Boundary workers on an EC2 Auto Scaling Group that **register themselves** at
-boot and **deregister themselves** before they die. Datadog watches the session
-count and tells GitHub Actions to grow or shrink the pool. Design page:
-https://claude.ai/artifact/UFvLSVrHBayrYWkWqhs1mo
+A pool of Boundary workers that grows when people are using it and shrinks when
+they are not, with no human in the loop.
+
+- **[Build by hand](01-Build-By-Hand.md)** — build it by hand, once, so you have touched every part
+- **[Build with Terraform](02-Build-With-Terraform.md)** — the Terraform + GitHub Actions version
+- **[notes/Issues.md](../notes/Issues.md)** — everything that broke while building it, and why
+
+> **This layer sits on top of the base platform — build that first.**
+> It reuses the VPC and subnets, the private EKS cluster, the Vault Kubernetes
+> secrets engine, and the Boundary targets and credential stores created by
+> [Build by hand](../01-Build-By-Hand.md) (or
+> [Build with Terraform](../02-Build-With-Terraform.md)). Nothing here
+> creates them, and every step assumes one worker is already registered and
+> working.
+
+---
+
+## The shape of it
+
+![Boundary worker autoscaling architecture: the session path from laptop through a public-subnet worker into a private EKS API, and the scaling loop from worker metric through Datadog and GitHub Actions back to the Auto Scaling group](../docs/autoscaling-architecture.svg)
+
+Two halves, and they meet at the worker.
+
+**The session path** (orange) — you authenticate to HCP Boundary on 443, then
+your client connects **straight to a worker's public IP on 9202**. The worker
+proxies that to the private EKS API and fetches a 15-minute credential from
+Vault on the way.
+
+**The scaling loop** (green) — the worker reports how many connections it is
+carrying, Datadog decides, GitHub Actions acts, the ASG resizes, and a new
+worker registers itself and starts reporting. The loop closes.
+
+In one line: **sessions → metric → monitor → workflow → pool size**.
+
+---
+
+## Decisions, and why
+
+### Scale on sessions, not CPU
+
+A Boundary worker is a TCP proxy. It is busy when people are connected through
+it, and its CPU barely moves either way. CPU would tell you nothing.
+
+The metric is **open proxy connections per worker**, averaged across the pool.
+
+### Workers are publicly reachable — deliberately
+
+This is the decision that surprises people, and it is not for convenience.
+
+Boundary can route a session two ways. If the worker only dials **out**, the
+client meets it over a reverse connection inside HCP. That works fine — but
+Boundary does not instrument that path, so the worker reports **zero sessions
+forever** and nothing can scale.
+
+Making the worker directly reachable puts the session on the instrumented path,
+where the counters are real. Four things have to line up:
+
+| | |
+|---|---|
+| Public subnet | with a public IP forced in the launch template |
+| `public_addr` | read from instance metadata at boot — it differs per instance |
+| Security group | 9202 open to the client's IP, not just the VPC |
+| Target | **both** an ingress and an egress worker filter, on every target |
+
+**The rule this creates: a worker may carry the `eks` tag only if it is directly
+reachable.** Before ingress filtering an unreachable worker was merely unused;
+after it, the filter selects that worker and the client cannot connect. The
+single hand-built worker from the base build advertises `0.0.0.0:9202` from a
+private subnet, so it must be removed from the registry once the pool exists —
+stopping its instance is not enough, the worker record outlives it.
+
+The trade: the workers are on the internet on port 9202, and the security group
+is the only thing in front of them. Everything else about the design — private
+EKS endpoint, brokered credentials, no long-lived secrets — is unchanged.
+
+### The metric comes from `/metrics`, not `/health`
+
+The obvious source, `/health?worker_info=1` → `active_session_count`, is
+**always 0** on Boundary v1.0.1+ent. Not a lag — a live tunnel with a thousand
+proxy events and the field still reads zero.
+
+The Prometheus endpoint on the same port does work. The check reads
+`boundary_worker_proxy_websocket_active_connections` from there instead. No
+Prometheus server is involved; it is a URL that returns lines of text.
+
+### Scale out fast, scale in slow
+
+| | Out | In |
+|---|---|---|
+| Threshold | more than **10** sessions/worker | fewer than **3** |
+| Window | 5 minutes | 15 minutes |
+| Re-fire | every 10 min | every 20 min |
+
+The gap between 3 and 10 is what stops it oscillating: adding a worker halves
+the average immediately, and a scale-in threshold near 10 would fire straight
+back.
+
+### Datadog decides, GitHub acts
+
+Datadog owns the decision because it already holds the metric. It cannot change
+an ASG, so it calls a GitHub workflow, which assumes an AWS role by OIDC and
+moves desired capacity by one.
+
+No CloudWatch alarms, no scaling policies on the ASG. One place to look when
+something does not scale: the workflow run.
+
+### A worker deregisters itself before it dies
+
+An ASG lifecycle hook holds a terminating instance in `Terminating:Wait`. The
+worker uses that pause to finish its sessions and delete its own record from
+Boundary, then releases the hold. Without it you accumulate dead workers in the
+Boundary UI.
+
+The hook fails **open** — if the script breaks, the instance still terminates
+after 300 seconds. A broken cleanup script can never wedge the pool.
+
+### Two brokers, one verb each
+
+Registration and deregistration use different Boundary accounts. One may only
+`create` workers, the other may only `delete` them. Both passwords live in
+Vault and are fetched at boot using the instance's own IAM identity — nothing
+is baked into the image and no password is on disk.
+
+---
+
+## What runs on a worker
+
+Five units, all installed by Ansible into the AMI.
+
+| Unit | When | Does |
+|---|---|---|
+| `boundary-register` | once at first boot | Vault login → get registrar password → create the worker in Boundary → write `worker.hcl` |
+| `boundary-worker` | always | the proxy itself, ports 9202 (proxy) and 9203 (ops) |
+| `boundary-lifecycle` | always | watches for termination → drains → deletes the worker → releases the hook |
+| `boundary-protect` | every minute | turns on scale-in protection while the worker has sessions |
+| `boundary-logperm` | when the log appears | makes the event log readable by the Datadog agent |
+
+Plus the Datadog agent, which runs the custom check every 15 seconds.
+
+`/etc/boundary/env` is written by user-data at boot and holds the addresses and
+names every script reads. It is the one file to look at first when a worker
+misbehaves.
+
+---
+
+## Sizing and cost
+
+`t3.small`, not `t3.micro`. The worker itself is small, but it shares the box
+with the Datadog agent, and 1 GiB is not enough for both — the kernel kills
+Boundary, systemd restarts it every five seconds, and the burst credits run out.
+
+At roughly $0.03/hour per worker, a pool of six costs about $0.18/hour. The NAT
+gateway and the EKS control plane cost more than the workers do.
+
+---
+
+## Where things live
 
 ```
 autoscaling/
-  brokers/     Terraform  Boundary broker users + Vault AWS-auth roles + KV   (step 2)
-  ansible/     role that bakes the AMI: binaries, 3 scripts, Datadog Agent   (step 4)
-  packer/      builds the AMI with that role                                 (step 4)
-  asg/         IAM role, SG, launch template, ASG, lifecycle hook, GHA role  (step 5)
-  datadog/     webhooks, 3 monitors, dashboard                               (step 7)
-  scripts/     loadtest.sh                                                   (step 9)
-.github/workflows/
-  scale.yml    Datadog webhook -> desired capacity +/-1
-  ami-build.yml  bake + publish AMI id to SSM
-  infra.yml    plan/apply terraform + datadog
-  rotate-broker-creds.yml  weekly password rotation
+├── README.md                   this file
+├── 01-Build-By-Hand.md         build it by hand
+├── 02-Build-With-Terraform.md  build it with Terraform + Actions
+├── packer/                     bakes the worker AMI
+├── ansible/                    what goes into the AMI
+├── asg/                        launch template, ASG, IAM, security group
+├── brokers/                    the two Boundary accounts + Vault roles
+├── datadog/                    monitors, webhooks, dashboard
+└── scripts/                    scale-to-workers.sh, the load generator
 ```
-
-Every step ends with a check. Do not move on until the check passes.
-
----
-
-## Step 0 — what you already have, what changes
-
-Already built and reused as-is: VPC, private subnets, EKS with a private
-endpoint, in-cluster Vault behind an internal NLB, HCP Boundary with the
-`eks-api-*` targets.
-
-Changed in the existing code (one file):
-
-- `boundary/variables.tf` — `boundary_worker_filter` default is now
-  `"eks" in "/tags/type"` (a tag) instead of a worker name. Autoscaled workers
-  have generated names; they all carry tag `type=eks`. The hand-registered
-  worker `kst-eks-ap-southeast-1-worker-01` carries it too
-  (`aws/boundary-worker.tf` sets `type = ["eks", "vpc", "private"]`), so one
-  filter selects the original worker and the whole pool.
-
-**One thing to do live (the code default does not change the running cluster).**
-The targets and the Vault credential store were built when the filter matched
-the older tag vocabulary (`"k8s_vault" in "/tags/type"`) or the worker name.
-ASG workers carry neither, so until this is updated they would serve no
-sessions. In the Boundary UI — or by CLI — set the **Egress Worker Filter** of
-`eks-api-viewer`, `eks-api-operator`, `eks-api-admin` **and** the worker filter
-of the `vault` credential store to:
-
-```
-"eks" in "/tags/type"
-```
-
-```bash
-export BOUNDARY_ADDR=https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud
-boundary authenticate                                  # as admin
-for T in ttcp_d9cw5TgQOO ttcp_jeFYI2LB06 ttcp_oZ4UOSIoXm; do
-  boundary targets update tcp -id $T -egress-worker-filter '"eks" in "/tags/type"'
-done
-boundary credential-stores update vault -id csvlt_xEcOfrT5Sx -worker-filter '"eks" in "/tags/type"'
-```
-
-The single hand-registered worker in `aws/boundary-worker.tf` keeps
-running until step 10.
-
-Tools on your laptop: `terraform`, `packer`, `ansible-core`, `aws`, `vault`,
-`boundary`, `jq`, `hey`.
-
----
-
-## Step 1 — collect the facts
-
-```bash
-export AWS_PROFILE=hc-lab
-export BOUNDARY_ADDR=https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud
-
-aws sts get-caller-identity --query Account --output text        # -> aws_account_id
-# The INITIAL password method (admin + both broker accounts live on it).
-# If this prints more than one line you still have the stray broker auth
-# methods from the A1 slip - clean them up first (see MANUAL-WALKTHROUGH A1).
-boundary auth-methods list -scope-id global -format json \
-  | jq -r '.items[] | select(.type=="password") | select(.name | startswith("Generated global scope initial")) | .id'   # -> ampw_WNbi76VghW
-kubectl -n vault get svc vault -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'   # -> Vault NLB host
-```
-
-Write them down; steps 2 and 5 use them.
-
----
-
-## Step 2 — brokers: Boundary users + Vault roles (laptop)
-
-> **Did MANUAL-WALKTHROUGH A by hand already? Then these objects exist and this
-> apply would collide with them** (duplicate `aws/` mount in Vault, duplicate
-> `worker-registrar` login name in Boundary). Two ways forward:
->
-> - **Keep the hand-built objects** (the walkthrough path): do *not* apply this
->   module now. Everything in D–G only needs the objects to *exist*; the ids in
->   the walkthrough's constants table are the live truth.
-> - **Adopt it into Terraform** (needed before `rotate-broker-creds.yml` or an
->   unattended `infra.yml` apply can own rotation): delete the hand-made Vault
->   pieces and import or recreate, then apply once. The cheap, clean sequence,
->   from the walkthrough's end state (one password method, two broker accounts
->   on it, port-forward running):
->
->   ```bash
->   # Vault: remove the hand-made aws mount + policies + KV entries (TF recreates all)
->   vault auth disable aws/
->   vault policy delete boundary-worker-registrar
->   vault policy delete boundary-worker-deregistrar
->   vault kv metadata delete secret/boundary/registrar
->   vault kv metadata delete secret/boundary/deregistrar
->   # Boundary: the users/roles you made in A1 collide by name -> delete them
->   # (the accounts on ampw_WNbi76VghW are what TF will re-create)
->   boundary roles delete -id r_...        # worker-registrar / worker-deregistrar roles
->   boundary users delete -id u_...        # and their users
->   boundary accounts delete -id acct_...  # and the accounts
->
->   cd autoscaling/brokers
->   cp terraform.tfvars.example terraform.tfvars   # ampw_ id, admin login/password, aws_account_id
->   terraform init && terraform plan && terraform apply
->   ```
->
->   Prefer importing over deleting? `terraform import vault_auth_backend.aws aws`,
->   `terraform import "boundary_account_password.broker[\"registrar\"]" acct_…`,
->   same for users/roles/policies/KV secrets — but `random_password` imports the
->   password result, so deletion + recreate is genuinely simpler here.
-
-This module talks to Boundary (admin) and to Vault. Vault is in-cluster, so
-port-forward first.
-
-```bash
-kubectl -n vault port-forward svc/vault 8200:8200 &     # leave running
-export VAULT_ADDR=http://127.0.0.1:8200
-export VAULT_TOKEN=<root or admin token>
-
-cd autoscaling/brokers
-cp terraform.tfvars.example terraform.tfvars   # fill in: ampw_ id, admin login/password, aws_account_id
-terraform init
-terraform plan
-terraform apply
-```
-
-What it creates:
-
-| In | What |
-|---|---|
-| Boundary (global) | accounts + users + roles `worker-registrar` (`type=worker;actions=create:controller-led`) and `worker-deregistrar` (`ids=*;type=worker;actions=delete`) |
-| Vault | auth method `aws/`; roles `boundary-worker-register` and `boundary-worker-deregister`, each bound to IAM role `arn:aws:iam::<acct>:role/boundary-asg-worker` (created in step 5); one policy each |
-| Vault KV | `secret/boundary/registrar` and `secret/boundary/deregistrar` — `{boundary_addr, auth_method_id, login_name, password}` |
-
-The passwords are generated by Terraform and written straight into Vault. You
-never see them.
-
-**Check**
-
-```bash
-vault kv get -field=login_name secret/boundary/registrar      # worker-registrar
-vault read auth/aws/role/boundary-worker-register              # bound_iam_principal_arn shows the role ARN
-boundary roles list -scope-id global | grep worker-            # both roles
-```
-
----
-
-## Step 3 — one-time AWS parameters
-
-```bash
-# Datadog API key. Read by each worker at boot; never baked into the AMI.
-aws ssm put-parameter --name /boundary-worker/datadog_api_key \
-  --type SecureString --value '<DD_API_KEY>'
-
-# Placeholder AMI id so terraform can plan before the first bake.
-aws ssm put-parameter --name /boundary-worker/ami_id --type String --value ami-placeholder
-```
-
----
-
-## Step 4 — bake the AMI (laptop first, pipeline later)
-
-Packer builds a temporary instance in a **public** subnet, runs the Ansible
-role, snapshots it, deletes the instance.
-
-```bash
-VPC=$(cd aws && terraform output -raw vpc_id)
-SUBNET=$(cd aws && terraform output -json public_subnet_ids | jq -r '.[0]')
-
-cd autoscaling/packer
-packer init .
-packer build -var vpc_id=$VPC -var subnet_id=$SUBNET .          # ~6 min
-AMI=$(jq -r '.builds[-1].artifact_id | split(":")[1]' manifest.json)
-aws ssm put-parameter --name /boundary-worker/ami_id --type String --value $AMI --overwrite
-```
-
-What the role bakes:
-
-| Path | Purpose |
-|---|---|
-| `/usr/bin/boundary`, `/usr/bin/vault` | binaries, pinned + checksum-verified |
-| `/usr/local/bin/boundary-register.sh` | at first boot: Vault IAM login → registrar password → `boundary workers create controller-led` → writes `worker.hcl` with the activation token, saves worker id |
-| `/usr/local/bin/boundary-lifecycle.sh` | runs forever: polls instance metadata; on ASG terminate or Spot notice → drain → Vault IAM login → deregistrar password → `boundary workers delete` → `complete-lifecycle-action` |
-| `/usr/local/bin/boundary-protect.sh` | every minute: scale-in protection ON while sessions > 0, OFF at 0 |
-| systemd units | `boundary-register` → `boundary-worker` → `boundary-lifecycle`, `boundary-protect.timer` — all gated on `/etc/boundary/env` |
-| Datadog Agent 7 | installed only; `checks.d/boundary_worker.py` + conf; tails `/var/log/boundary/events.log` |
-
-**Check**: `aws ec2 describe-images --image-ids $AMI --query 'Images[0].State'` → `available`.
-
----
-
-## Step 5 — the ASG (laptop)
-
-```bash
-cd autoscaling/asg
-cp terraform.tfvars.example terraform.tfvars    # optional; defaults are fine
-terraform init
-terraform plan -var github_repo=<owner>/<repo>  # omit github_repo to skip the GHA role for now
-terraform apply -var github_repo=<owner>/<repo>
-```
-
-Creates: IAM role `boundary-asg-worker` (the ARN Vault trusts — check
-`terraform output worker_iam_role_arn` equals `brokers` output
-`trusted_iam_role_arn`), security group, launch template (AMI from SSM,
-user-data writes `/etc/boundary/env` + Datadog key), ASG `boundary-workers`
-min 1 / max 6 with the `EC2_INSTANCE_TERMINATING` lifecycle hook, and the
-GitHub OIDC role.
-
-**Check — zero-touch registration (~2 min after apply)**
-
-```bash
-boundary workers list -format json | jq -r '.items[] | "\(.name)\t\(.address // "-")\t\(.last_status_time)"'
-# expect: worker-i-0xxxxxxxx   with a recent last_status_time
-```
-
-If it is missing:
-
-```bash
-IID=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names boundary-workers \
-      --query 'AutoScalingGroups[0].Instances[0].InstanceId' --output text)
-aws ssm start-session --target $IID
-  sudo journalctl -u boundary-register -u boundary-worker --no-pager
-  sudo cat /etc/boundary/worker_id
-  curl -s 'http://127.0.0.1:9203/health?worker_info=1'
-```
-
-**Check — zero-touch deregistration**
-
-```bash
-aws autoscaling set-desired-capacity --auto-scaling-group-name boundary-workers --desired-capacity 2
-# wait ~2 min, confirm two workers listed, then:
-aws autoscaling terminate-instance-in-auto-scaling-group --instance-id $IID --no-should-decrement-desired-capacity
-# within ~30 s the worker is gone from `boundary workers list`; the EC2 terminates a few seconds later.
-aws autoscaling set-desired-capacity --auto-scaling-group-name boundary-workers --desired-capacity 1
-```
-
----
-
-## Step 6 — GitHub repository secrets
-
-| Secret | Value | Used by |
-|---|---|---|
-| `AWS_GHA_ROLE_ARN` | `terraform output github_actions_role_arn` (step 5) | scale, ami-build, infra |
-| `DATADOG_API_KEY`, `DATADOG_APP_KEY` | from Datadog → Organization settings | infra (datadog job) |
-| `GH_DISPATCH_TOKEN` | fine-grained PAT, **this repo only**, permission *Contents: write* | infra → stored in the Datadog webhook |
-| `BOUNDARY_AUTH_METHOD_ID`, `BOUNDARY_ADMIN_LOGIN`, `BOUNDARY_ADMIN_PASSWORD`, `AWS_ACCOUNT_ID`, `VAULT_ADDR` | only if you run `rotate-broker-creds.yml` in CI (needs HCP Vault or a self-hosted runner — see the workflow header) | rotate |
-
-Also enable the **Datadog AWS integration** for this account if not already
-(it supplies `aws.autoscaling.*` for the dashboard) and tell it to collect
-tag `asg`.
-
----
-
-## Step 7 — Datadog monitors, webhooks, dashboard (laptop or `infra.yml`)
-
-```bash
-cd autoscaling/datadog
-cp terraform.tfvars.example terraform.tfvars   # api/app key, github_repo, github_dispatch_token
-terraform init && terraform apply
-terraform output dashboard_url
-```
-
-| Object | Behaviour |
-|---|---|
-| webhook `gha-scale-out` / `gha-scale-in` | POST to `https://api.github.com/repos/<repo>/dispatches` with `{"event_type":"scale","client_payload":{"direction":"out|in"}}` |
-| monitor *scale OUT* | `avg(last_5m):avg:boundary.worker.active_sessions{asg:boundary-workers} > 10` → `@webhook-gha-scale-out`; re-notifies every 10 min while still above, so a big spike adds one worker per 10 min up to max |
-| monitor *scale IN* | `avg(last_15m): … < 3` → `@webhook-gha-scale-in`; 15 min is the stabilization window |
-| monitor *worker stopped reporting* | a host with no `boundary.worker.health` for 10 min — your "did deregistration fail?" alarm |
-| dashboard | active sessions, avg per worker (coloured by threshold), workers in service, monitor status, sessions per worker with threshold lines, desired vs in-service, worker health, session events/min from the log, EC2 CPU, Vault requests, event stream |
-
-**Check the wiring without waiting for real load**
-
-```bash
-# 1. the Agent is sending the metric
-#    Datadog → Metrics → Explorer → boundary.worker.active_sessions  (one line per worker, value 0)
-
-# 2. the webhook -> workflow path
-gh workflow run scale.yml -f direction=out     # or: Datadog → monitor → "Test notifications"
-gh run watch
-aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names boundary-workers \
-  --query 'AutoScalingGroups[0].DesiredCapacity'   # 2
-gh workflow run scale.yml -f direction=in
-```
-
----
-
-## Step 8 — hand the AMI build to the pipeline
-
-Push. Any change under `autoscaling/ansible/` or `autoscaling/packer/` on
-`main` runs `ami-build.yml`: bakes, writes the new AMI id to SSM, starts an
-ASG instance refresh (new workers register, old ones deregister, one at a
-time, 100 % healthy kept).
-
-`infra.yml` plans on PRs and applies on `main` for `asg/` and `datadog/`.
-**Before letting it apply the ASG module**, move `aws/` and
-`autoscaling/asg/` to an S3 backend — the state is local today and a
-runner cannot see it. Until then, keep applying step 5 from the laptop; the
-Datadog job has no such dependency.
-
----
-
-## Step 9 — load test
-
-```bash
-boundary authenticate oidc -auth-method-id amoidc_eY8ldrT0GG   # Okta - any user allowed on a target
-cd autoscaling/scripts
-./loadtest.sh 25 ttcp_d9cw5TgQOO 12m
-```
-
-What you should see, in order:
-
-1. Dashboard: *avg sessions per worker* climbs past 10 and turns red.
-2. ≤ 5 min later: monitor *scale OUT* alerts → Actions tab shows `scale-workers` → desired 1→2.
-3. ~90 s later: `boundary workers list` shows `worker-i-…` #2; new sessions land on it.
-4. Ctrl-C the test. 15 min of quiet → *scale IN* → desired 2→1.
-5. The idle worker (protection OFF) drains, deletes itself from Boundary, then terminates. `boundary workers list` is back to one.
-
----
-
-## Step 10 — retire the single hand-managed worker
-
-Once step 9 is green:
-
-```bash
-boundary workers delete -id <w_ of kst-eks-ap-southeast-1-worker-01>
-cd aws && terraform destroy -target=aws_instance.boundary_worker \
-  -target=aws_security_group.boundary_worker -target=aws_iam_instance_profile.boundary_worker
-git rm aws/boundary-worker.tf
-```
-
-The tag filter on the targets (`"eks" in "/tags/type"`) already matches the
-pool, so nothing else changes.
-
----
-
-## How the two sensitive paths actually run (for reading the scripts)
-
-```
-boot                                             terminate
-────                                             ─────────
-user-data writes /etc/boundary/env               ASG hook -> Terminating:Wait
-boundary-register.service                        boundary-lifecycle.service sees
-  vault login -method=aws                          target-lifecycle-state=Terminated
-      role=boundary-worker-register                wait until active_session_count==0 (<=240s)
-  vault kv get secret/boundary/registrar           vault login -method=aws
-  boundary authenticate password                       role=boundary-worker-deregister
-  boundary workers create controller-led           vault kv get secret/boundary/deregistrar
-      -name worker-<instance-id>                   boundary authenticate password
-  write worker.hcl (activation token, tags)        boundary workers delete -id $(cat worker_id)
-  save /etc/boundary/worker_id                     complete-lifecycle-action CONTINUE
-boundary-worker.service starts                   EC2 terminates
-```
-
-No Boundary token or password is ever written to disk on the instance; they
-live in shell variables for a few seconds and are unset.
-
-## Tuning knobs
-
-| Where | Knob | Default |
-|---|---|---|
-| `datadog/variables.tf` | `scale_out_sessions_per_worker` / `scale_in_sessions_per_worker` | 10 / 3 |
-| `datadog/variables.tf` | `scale_in_window` (stabilization) | 15 min |
-| `asg/variables.tf` | `asg_min_size` / `asg_max_size` | 1 / 6 |
-| `asg/main.tf` | lifecycle hook `heartbeat_timeout` | 300 s |
-| `ansible/.../boundary-lifecycle.sh` | `DRAIN_TIMEOUT` | 240 s |

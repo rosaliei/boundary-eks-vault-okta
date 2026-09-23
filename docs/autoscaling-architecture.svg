@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 1090" width="1300" height="1090" role="img" aria-label="Boundary worker autoscaling architecture: session path and scaling loop">
+<defs>
+<marker id="a-b4530a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#b4530a"/></marker>
+<marker id="b-b4530a" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 10 0 L 0 5 L 10 10 z" fill="#b4530a"/></marker>
+<marker id="a-2f7d5d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2f7d5d"/></marker>
+<marker id="b-2f7d5d" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 10 0 L 0 5 L 10 10 z" fill="#2f7d5d"/></marker>
+<marker id="a-2b5f8e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2b5f8e"/></marker>
+<marker id="b-2b5f8e" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 10 0 L 0 5 L 10 10 z" fill="#2b5f8e"/></marker>
+<marker id="a-6f6b64" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6f6b64"/></marker>
+<marker id="b-6f6b64" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 10 0 L 0 5 L 10 10 z" fill="#6f6b64"/></marker>
+</defs>
+<rect x="0" y="0" width="1300" height="1090" rx="0" fill="#fcfcfb" stroke="#fcfcfb" stroke-width="1"/>
+<text x="40" y="38" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="20" fill="#1c1b19" font-weight="bold" text-anchor="start">Boundary worker autoscaling</text>
+<text x="40" y="59" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#6f6b64" font-weight="normal" text-anchor="start">How a session reaches a private EKS API, and how the pool that carries it resizes itself</text>
+<text x="40" y="96" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#b4530a" font-weight="bold" text-anchor="start" letter-spacing="1.8">1 — THE SESSION PATH</text>
+<rect x="40" y="112" width="220" height="132" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="60" y="136" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">YOUR LAPTOP</text>
+<text x="60" y="160" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13" fill="#1c1b19" font-weight="bold" text-anchor="start">boundary connect</text>
+<text x="60" y="180" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">Okta identity, no kubeconfig</text>
+<text x="60" y="197" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">and no VPN</text>
+<rect x="60" y="209" width="149" height="19" rx="9.5" fill="#b4530a" fill-opacity="0.10" stroke="#b4530a" stroke-width="0.9"/>
+<text x="134.5" y="222.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" fill="#b4530a" font-weight="bold" text-anchor="middle">kubectl :local-port</text>
+<rect x="320" y="112" width="250" height="132" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="340" y="136" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">HCP BOUNDARY  ·  CONTROL PLANE</text>
+<text x="340" y="160" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">Authenticate, authorize</text>
+<text x="340" y="178" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">the session, broker the</text>
+<text x="340" y="196" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">credential</text>
+<rect x="340" y="209" width="79" height="19" rx="9.5" fill="#b4530a" fill-opacity="0.10" stroke="#b4530a" stroke-width="0.9"/>
+<text x="379.5" y="222.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" fill="#b4530a" font-weight="bold" text-anchor="middle">:443 only</text>
+<line x1="262" y1="168" x2="318" y2="168" stroke="#b4530a" stroke-width="1.8" marker-end="url(#a-b4530a)"/>
+<text x="290" y="160" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="middle">log in</text>
+<rect x="610" y="112" width="300" height="132" rx="12" fill="#fdf6ee" stroke="#e6cdae" stroke-width="1"/>
+<text x="630" y="136" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#b4530a" font-weight="bold" text-anchor="start" letter-spacing="1.6">THE DECISION THAT SHAPES THIS</text>
+<text x="630" y="158" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#1c1b19" font-weight="normal" text-anchor="start">The client connects to the worker</text>
+<text x="630" y="174" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#1c1b19" font-weight="normal" text-anchor="start">DIRECTLY on 9202. Boundary only</text>
+<text x="630" y="190" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#1c1b19" font-weight="normal" text-anchor="start">instruments that path — over the</text>
+<text x="630" y="206" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#1c1b19" font-weight="normal" text-anchor="start">dial-out path a worker reports</text>
+<text x="630" y="222" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#1c1b19" font-weight="normal" text-anchor="start">0 sessions and nothing can scale.</text>
+<rect x="40" y="272" width="870" height="420" rx="12" fill="#f5f2ec" stroke="#d8d4cc" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="62" y="298" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">AWS VPC   10.0.0.0/16   ·   ap-southeast-1</text>
+<rect x="62" y="316" width="450" height="356" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="82" y="340" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">PUBLIC SUBNETS  ·  3 AZs</text>
+<rect x="82" y="356" width="200" height="296" rx="12" fill="#ffffff" stroke="#c9b9a4" stroke-width="1"/>
+<text x="98" y="380" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">BOUNDARY WORKER</text>
+<text x="98" y="402" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" fill="#1c1b19" font-weight="bold" text-anchor="start">EC2  t3.small</text>
+<text x="98" y="419" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">public IP, in an ASG</text>
+<rect x="98" y="430" width="100" height="19" rx="9.5" fill="#b4530a" fill-opacity="0.10" stroke="#b4530a" stroke-width="0.9"/>
+<text x="148.0" y="443.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" fill="#b4530a" font-weight="bold" text-anchor="middle">:9202  proxy</text>
+<rect x="98" y="456" width="156" height="19" rx="9.5" fill="#2f7d5d" fill-opacity="0.10" stroke="#2f7d5d" stroke-width="0.9"/>
+<text x="176.0" y="469.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" fill="#2f7d5d" font-weight="bold" text-anchor="middle">:9203  ops + metrics</text>
+<line x1="98" y1="486" x2="266" y2="486" stroke="#d8d4cc" stroke-width="1"/>
+<text x="98" y="504" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">UNITS</text>
+<text x="98" y="522" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#1c1b19" font-weight="normal" text-anchor="start">register</text>
+<text x="98" y="538" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#1c1b19" font-weight="normal" text-anchor="start">worker</text>
+<text x="98" y="554" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#1c1b19" font-weight="normal" text-anchor="start">lifecycle</text>
+<text x="98" y="570" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#1c1b19" font-weight="normal" text-anchor="start">protect</text>
+<text x="98" y="586" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#1c1b19" font-weight="normal" text-anchor="start">logperm</text>
+<text x="98" y="606" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10.5" fill="#2f7d5d" font-weight="bold" text-anchor="start">+ Datadog agent</text>
+<text x="98" y="630" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">registers itself at boot,</text>
+<text x="98" y="644" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">deletes itself at the end</text>
+<rect x="300" y="356" width="52" height="296" rx="12" fill="#fbf9f6" stroke="#d8d4cc" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="326" y="500" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18" fill="#6f6b64" font-weight="normal" text-anchor="middle">…</text>
+<rect x="360" y="356" width="52" height="296" rx="12" fill="#fbf9f6" stroke="#d8d4cc" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="386" y="500" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18" fill="#6f6b64" font-weight="normal" text-anchor="middle">…</text>
+<rect x="420" y="356" width="52" height="296" rx="12" fill="#fbf9f6" stroke="#d8d4cc" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="446" y="500" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="18" fill="#6f6b64" font-weight="normal" text-anchor="middle">…</text>
+<text x="386" y="380" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#6f6b64" font-weight="bold" text-anchor="middle">1 to 6</text>
+<text x="386" y="672" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="middle">Auto Scaling group</text>
+<rect x="532" y="316" width="356" height="356" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="552" y="340" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">PRIVATE SUBNETS  ·  3 AZs</text>
+<rect x="552" y="360" width="316" height="120" rx="12" fill="#ffffff" stroke="#b9c9d8" stroke-width="1"/>
+<text x="570" y="384" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">AMAZON EKS</text>
+<text x="570" y="408" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13" fill="#1c1b19" font-weight="bold" text-anchor="start">Kubernetes API</text>
+<text x="570" y="428" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">endpoint is PRIVATE only —</text>
+<text x="570" y="444" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">no public access at all</text>
+<rect x="570" y="452" width="44" height="19" rx="9.5" fill="#2b5f8e" fill-opacity="0.10" stroke="#2b5f8e" stroke-width="0.9"/>
+<text x="592.0" y="465.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" fill="#2b5f8e" font-weight="bold" text-anchor="middle">:443</text>
+<rect x="552" y="500" width="316" height="150" rx="12" fill="#ffffff" stroke="#b9c9d8" stroke-width="1"/>
+<text x="570" y="524" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">HASHICORP VAULT</text>
+<text x="570" y="548" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#1c1b19" font-weight="bold" text-anchor="start">Kubernetes secrets engine</text>
+<text x="570" y="568" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">mints a 15-minute ServiceAccount</text>
+<text x="570" y="584" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">token, scoped to one RBAC tier</text>
+<rect x="570" y="594" width="142" height="19" rx="9.5" fill="#2b5f8e" fill-opacity="0.10" stroke="#2b5f8e" stroke-width="0.9"/>
+<text x="641.0" y="607.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="10" fill="#2b5f8e" font-weight="bold" text-anchor="middle">internal NLB :8200</text>
+<text x="570" y="638" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">also holds the two broker passwords</text>
+<path d="M 150 250 L 150 300 L 150 356" fill="none" stroke="#b4530a" stroke-width="2.4" marker-end="url(#a-b4530a)"/>
+<text x="164" y="262" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#b4530a" font-weight="bold" text-anchor="start">session data, direct to :9202</text>
+<line x1="284" y1="430" x2="548" y2="430" stroke="#2b5f8e" stroke-width="2.0" marker-end="url(#a-2b5f8e)"/>
+<text x="414" y="422" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#2b5f8e" font-weight="bold" text-anchor="middle">proxied traffic</text>
+<path d="M 284 560 L 420 560 L 420 575 L 548 575" fill="none" stroke="#2b5f8e" stroke-width="1.8" stroke-dasharray="5 3" marker-end="url(#a-2b5f8e)"/>
+<text x="420" y="552" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="middle">IAM login → broker password</text>
+<text x="40" y="740" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#2f7d5d" font-weight="bold" text-anchor="start" letter-spacing="1.8">2 — THE SCALING LOOP</text>
+<rect x="40" y="756" width="1220" height="292" rx="12" fill="#f5f2ec" stroke="#d8d4cc" stroke-width="1" stroke-dasharray="5 4"/>
+<rect x="72" y="800" width="206" height="132" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="90" y="824" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">WORKER</text>
+<text x="90" y="848" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" fill="#1c1b19" font-weight="bold" text-anchor="start">open connections</text>
+<text x="90" y="868" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">on :9203/metrics</text>
+<text x="90" y="890" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">gauge, not CPU</text>
+<circle cx="90" cy="916" r="11" fill="#2f7d5d"/>
+<text x="90" y="920" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#ffffff" font-weight="bold" text-anchor="middle">1</text>
+<line x1="280" y1="866" x2="304" y2="866" stroke="#2f7d5d" stroke-width="2.0" marker-end="url(#a-2f7d5d)"/>
+<rect x="306" y="800" width="206" height="132" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="324" y="824" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">DATADOG AGENT</text>
+<text x="324" y="848" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" fill="#1c1b19" font-weight="bold" text-anchor="start">custom check</text>
+<text x="324" y="868" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">every 15 s</text>
+<text x="324" y="890" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">boundary.worker.active_sessions</text>
+<circle cx="324" cy="916" r="11" fill="#2f7d5d"/>
+<text x="324" y="920" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#ffffff" font-weight="bold" text-anchor="middle">2</text>
+<line x1="514" y1="866" x2="538" y2="866" stroke="#2f7d5d" stroke-width="2.0" marker-end="url(#a-2f7d5d)"/>
+<rect x="540" y="800" width="206" height="132" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="558" y="824" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">DATADOG MONITOR</text>
+<text x="558" y="848" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" fill="#1c1b19" font-weight="bold" text-anchor="start">out  &gt; 10 for 5m</text>
+<text x="558" y="868" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">in   &lt; 3 for 15m</text>
+<text x="558" y="890" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">the 3–10 gap stops flapping</text>
+<circle cx="558" cy="916" r="11" fill="#2f7d5d"/>
+<text x="558" y="920" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#ffffff" font-weight="bold" text-anchor="middle">3</text>
+<line x1="748" y1="866" x2="772" y2="866" stroke="#2f7d5d" stroke-width="2.0" marker-end="url(#a-2f7d5d)"/>
+<rect x="774" y="800" width="206" height="132" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="792" y="824" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">GITHUB ACTIONS</text>
+<text x="792" y="848" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" fill="#1c1b19" font-weight="bold" text-anchor="start">scale-workers</text>
+<text x="792" y="868" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">assumes AWS role</text>
+<text x="792" y="890" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">by OIDC, no static keys</text>
+<circle cx="792" cy="916" r="11" fill="#2f7d5d"/>
+<text x="792" y="920" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#ffffff" font-weight="bold" text-anchor="middle">4</text>
+<line x1="982" y1="866" x2="1006" y2="866" stroke="#2f7d5d" stroke-width="2.0" marker-end="url(#a-2f7d5d)"/>
+<rect x="1008" y="800" width="206" height="132" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="1026" y="824" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">AUTO SCALING GROUP</text>
+<text x="1026" y="848" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12" fill="#1c1b19" font-weight="bold" text-anchor="start">set-desired-capacity</text>
+<text x="1026" y="868" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#6f6b64" font-weight="normal" text-anchor="start">± 1, clamped 1–6</text>
+<text x="1026" y="890" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="normal" text-anchor="start">300 s cooldown</text>
+<circle cx="1026" cy="916" r="11" fill="#2f7d5d"/>
+<text x="1026" y="920" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#ffffff" font-weight="bold" text-anchor="middle">5</text>
+<path d="M 1111 934 L 1111 986 L 175 986 L 175 934" fill="none" stroke="#2f7d5d" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#a-2f7d5d)"/>
+<text x="643" y="1002" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#2f7d5d" font-weight="bold" text-anchor="middle">a new worker registers itself, joins the pool, and starts reporting — the loop closes</text>
+<rect x="940" y="112" width="320" height="132" rx="12" fill="#f2f7f4" stroke="#bcd8c9" stroke-width="1"/>
+<text x="960" y="136" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#2f7d5d" font-weight="bold" text-anchor="start" letter-spacing="1.6">SCALING IN</text>
+<text x="960" y="158" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#1c1b19" font-weight="normal" text-anchor="start">An ASG lifecycle hook pauses</text>
+<text x="960" y="174" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#1c1b19" font-weight="normal" text-anchor="start">termination. The worker drains its</text>
+<text x="960" y="190" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#1c1b19" font-weight="normal" text-anchor="start">sessions, deletes its own record</text>
+<text x="960" y="206" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#1c1b19" font-weight="normal" text-anchor="start">from Boundary, then releases the</text>
+<text x="960" y="222" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11" fill="#1c1b19" font-weight="normal" text-anchor="start">hold. Fails open after 300 s.</text>
+<rect x="940" y="272" width="320" height="420" rx="12" fill="#ffffff" stroke="#d8d4cc" stroke-width="1"/>
+<text x="960" y="296" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="9.5" fill="#6f6b64" font-weight="bold" text-anchor="start" letter-spacing="1.6">WHAT MAKES THIS WORK</text>
+<text x="960" y="322" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">Sessions, not CPU</text>
+<text x="960" y="339" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">A proxy is busy when people are</text>
+<text x="960" y="354" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">connected through it. Its CPU</text>
+<text x="960" y="369" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">barely moves either way.</text>
+<text x="960" y="422" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">Direct ingress, deliberately</text>
+<text x="960" y="439" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">Workers are reachable on 9202</text>
+<text x="960" y="454" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">from a short IP allowlist. Without</text>
+<text x="960" y="469" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">it the metric is always zero.</text>
+<text x="960" y="522" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">Datadog decides, GitHub acts</text>
+<text x="960" y="539" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">Datadog holds the metric but</text>
+<text x="960" y="554" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">cannot change an ASG, so it calls</text>
+<text x="960" y="569" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">a workflow that can.</text>
+<text x="960" y="622" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#1c1b19" font-weight="bold" text-anchor="start">Self-deregistration</text>
+<text x="960" y="639" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">No dead workers accumulate in</text>
+<text x="960" y="654" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">Boundary, because each one</text>
+<text x="960" y="669" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="10" fill="#6f6b64" font-weight="normal" text-anchor="start">removes itself on the way out.</text>
+</svg>
