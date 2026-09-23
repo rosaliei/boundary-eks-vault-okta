@@ -96,13 +96,6 @@ replaces it with a pool that sizes itself to demand:
 
 ## Built by hand first
 
-AI can generate every file in this repository in minutes; it cannot understand
-the system for me — and understanding is the thing an operator is paid for at
-3 a.m. So **every layer went up by hand in the console and the UI, until I
-could draw it from memory, and only then was automated.** Every diagram is
-mine, drawn in Excalidraw as I went. The code is the *output* of that
-understanding, not a substitute for it.
-
 The six drawings below are my heart work — sketched by hand while each layer
 went up, not generated and not copied. Each one is the map I used to force the
 details into my head, and it shows more of how I learn than any bullet list
