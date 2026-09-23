@@ -1,0 +1,9 @@
+[Unit]
+Description=Keep the Boundary event log readable by dd-agent
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target

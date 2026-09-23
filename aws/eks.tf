@@ -19,10 +19,18 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  # Private endpoint: always on (Vault + Boundary worker use this)
-  # Public endpoint: bootstrap/testing only, firewalled to admin IP CIDRs
-  # NOTE: flip public_access back to false once Boundary + Vault are wired
-  cluster_endpoint_public_access       = true
+  # Private endpoint only. Flipped false on 2026-09-23, which is the point of
+  # the whole build: with a public endpoint reachable, HCP's own managed workers
+  # can serve sessions directly and the self-managed pool is bypassed - its
+  # proxy counters stay at 0, so `boundary.worker.active_sessions` never moves
+  # and the autoscaling loop has no input. Private-only forces every session
+  # through a worker inside the VPC.
+  #
+  # Re-enable with the AWS API (never needs cluster access, so this cannot lock
+  # you out):
+  #   aws eks update-cluster-config --name hc-eks-cluster \
+  #     --resources-vpc-config publicAccessCidrs=<ip>/32,endpointPublicAccess=true,endpointPrivateAccess=true
+  cluster_endpoint_public_access       = false
   cluster_endpoint_public_access_cidrs = var.admin_public_cidrs
   cluster_endpoint_private_access      = true
 
@@ -33,22 +41,6 @@ module "eks" {
   # Enable cluster creator admin permissions
   # This allows the IAM entity running Terraform to manage the cluster
   enable_cluster_creator_admin_permissions = true
-
-  # Access entries for additional administrators (optional)
-  # Uncomment and configure if you need additional admin access
-  # access_entries = {
-  #   admin_role = {
-  #     principal_arn     = var.admin_iam_role_arn
-  #     policy_associations = {
-  #       admin = {
-  #         policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-  #         access_scope = {
-  #           type = "cluster"
-  #         }
-  #       }
-  #     }
-  #   }
-  # }
 
   # Cluster addons - essential components
   cluster_addons = {

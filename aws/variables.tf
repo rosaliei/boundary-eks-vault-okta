@@ -101,23 +101,11 @@ variable "node_capacity_type" {
 }
 
 # -----------------------------------------------------------------------------
-# Access Entry Configuration (for initial admin access)
+# EKS endpoint access
 # -----------------------------------------------------------------------------
 
-variable "admin_iam_role_arn" {
-  description = "IAM role ARN to grant cluster admin access via access entries"
-  type        = string
-  default     = ""
-}
-
-variable "admin_iam_user_arn" {
-  description = "IAM user ARN to grant cluster admin access via access entries"
-  type        = string
-  default     = ""
-}
-
 variable "admin_public_cidrs" {
-  description = "CIDRs allowed to reach the EKS public endpoint (bootstrap/testing only; set to your current IP /32). Flip cluster_endpoint_public_access to false once Boundary + Vault are wired."
+  description = "CIDRs allowed to reach the EKS public endpoint. Inert while cluster_endpoint_public_access is false, which is the intended steady state - set both together if you need to reach the API without Boundary."
   type        = list(string)
   default     = ["92.98.212.193/32"]
 }
@@ -139,6 +127,10 @@ variable "boundary_worker_name" {
 }
 
 variable "boundary_worker_instance_type" {
+  # t3.micro is correct HERE and wrong for the ASG pool. This worker runs the
+  # Boundary binary alone; the autoscaled workers also carry the Datadog agent,
+  # and 1 GiB does not hold both - the kernel OOM-kills boundary. The ASG uses
+  # t3.small for that reason (autoscaling/asg/variables.tf). Don't unify them.
   description = "Instance type for the Boundary worker. The worker is a lightweight TCP proxy; t3.micro is ample."
   type        = string
   default     = "t3.micro"

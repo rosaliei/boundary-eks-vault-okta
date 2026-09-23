@@ -1,0 +1,18 @@
+[Unit]
+Description=Make the Boundary event log readable by the boundary group (for dd-agent)
+# Boundary creates /var/log/boundary/events.log with an EXPLICIT mode of 0600.
+# A umask cannot widen an explicit mode, so UMask= on boundary-worker.service
+# does nothing (tried 2026-09-23). dd-agent is in the boundary group and the
+# directory is 0750, but 0600 grants the group nothing, so the Datadog log
+# tailer fails with "permission denied" and ships nothing, silently.
+#
+# A .path unit with PathExists= does NOT work here: it re-triggers as soon as
+# this oneshot exits, because the file still exists, and loops until systemd's
+# start limit trips. A timer is boring and correct, and also covers rotation.
+
+[Service]
+Type=oneshot
+# Only touches the file when it exists and is not already 0640, so the usual
+# run is a no-op.
+ExecStart=/bin/sh -c 'test -e /var/log/boundary/events.log || exit 0; \
+  [ "$(stat -c %%a /var/log/boundary/events.log)" = "640" ] || chmod 0640 /var/log/boundary/events.log'

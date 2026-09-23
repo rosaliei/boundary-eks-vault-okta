@@ -5,8 +5,15 @@
 #   ASG_NAME, LIFECYCLE_HOOK_NAME
 
 set -euo pipefail
+# `set -a` matters: the vault and boundary CLIs are CHILD processes and read
+# VAULT_ADDR / BOUNDARY_ADDR from the ENVIRONMENT. A bare `source` sets shell
+# variables that children never see, so vault silently falls back to its own
+# default https://127.0.0.1:8200 and every login dies with "connection refused"
+# on an address nothing configured (2026-09-22). Auto-export the whole file.
+set -a
 # shellcheck disable=SC1091
 source /etc/boundary/env
+set +a
 
 imds() {
   # IMDSv2 only. A fresh token per call - the lifecycle service polls for days,
@@ -26,10 +33,18 @@ export AWS_DEFAULT_REGION="$AWS_REGION"
 asg_name() { echo "$ASG_NAME"; }
 
 active_sessions() {
-  # Worker ops listener. Missing/unreachable counts as 0 so a dead worker
-  # never blocks termination.
-  curl -sf --max-time 2 "http://127.0.0.1:9203/health?worker_info=1" \
-    | jq -r '(.worker_process_info // .) | .active_session_count // 0' 2>/dev/null || echo 0
+  # Reads /metrics, NOT /health. `active_session_count` on the health endpoint
+  # is always 0 on Boundary v1.0.1+ent, so both callers of this function were
+  # silently dead: boundary-protect never turned scale-in protection on, and
+  # the lifecycle drain always returned "drained" instantly. Measured
+  # 2026-09-23 against a live tunnel. See item 14 in notes/Issues.md.
+  #
+  # Missing/unreachable still counts as 0 so a dead worker never blocks its own
+  # termination.
+  curl -sf --max-time 2 "http://127.0.0.1:9203/metrics" 2>/dev/null \
+    | awk '$1 == "boundary_worker_proxy_websocket_active_connections" { print int($2); found=1 }
+           END { if (!found) print 0 }' \
+    | head -1
 }
 
 # boundary_login <vault-aws-role> <kv-name>

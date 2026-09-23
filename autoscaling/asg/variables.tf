@@ -34,8 +34,14 @@ variable "datadog_api_key_ssm_parameter" {
 }
 
 variable "instance_type" {
+  # NOT t3.micro. 1 GiB is not enough for the Boundary worker (~470 MiB RSS plus
+  # two plugin processes) alongside the Datadog agent (agent + trace-loader +
+  # agent-data-plane + system-probe). The kernel OOM-kills `boundary`, systemd
+  # restarts it every 5 s, and that loop burns the burst credits until the SSM
+  # agent is starved too - so the box also stops being reachable for debugging.
+  # Measured 2026-09-23; see notes/Issues.md.
   type    = string
-  default = "t3.micro"
+  default = "t3.small"
 }
 
 variable "asg_min_size" {
@@ -72,4 +78,16 @@ variable "vault_addr" {
 variable "datadog_site" {
   type    = string
   default = "datadoghq.com"
+}
+
+variable "client_cidrs" {
+  description = <<-DESC
+    CIDRs allowed to reach the worker's proxy port 9202 directly. This is what
+    makes a worker an INGRESS worker: without direct client reachability the
+    session takes the multi-hop reverse connection, which Boundary does not
+    instrument, so active_session_count stays 0 and nothing can autoscale.
+    Keep it tight - it is the only thing between the internet and the proxy.
+  DESC
+  type        = list(string)
+  default     = ["217.165.139.151/32", "92.98.212.193/32"]
 }

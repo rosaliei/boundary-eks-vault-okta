@@ -7,6 +7,12 @@ ConditionPathExists=/etc/boundary/worker.hcl
 [Service]
 User=boundary
 Group=boundary
+# Boundary creates /var/log/boundary/events.log itself. Under the default umask
+# that file lands 0600, so dd-agent cannot tail it even though the role puts
+# dd-agent in the boundary group and the directory is 0750 - and the Datadog
+# log pipeline is silent with no error. 0027 makes new files 0640: readable by
+# the boundary group, still unreadable by everyone else.
+UMask=0027
 ExecStart=/usr/bin/boundary server -config=/etc/boundary/worker.hcl
 Restart=on-failure
 RestartSec=5

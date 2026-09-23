@@ -3,3 +3,7 @@
 # asg_max_size  = 6
 # instance_type = "t3.micro"
 # vault_addr    = "http://<internal-nlb>:8200"   # or HCP Vault private endpoint
+
+# GitHub's real OIDC sub claim (numeric ids, NOT owner/repo) - see github-oidc.tf
+# github_repo     = "rosaliei/boundary-eks-vault-okta"
+# github_repo_sub = "rosaliei@40911856/boundary-eks-vault-okta@1358281041"

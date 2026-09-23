@@ -103,6 +103,8 @@
     - boundary-lifecycle.service
     - boundary-protect.service
     - boundary-protect.timer
+    - boundary-logperm.service
+    - boundary-logperm.timer
 
 # Enabled but not started: they gate on /etc/boundary/env, which only exists
 # on a real instance after user-data has run.
@@ -116,6 +118,10 @@
     - boundary-worker.service
     - boundary-lifecycle.service
     - boundary-protect.timer
+    # Keeps events.log at 0640 so dd-agent can tail it. A .path unit loops
+    # here (PathExists re-fires the moment the oneshot exits), so this is a
+    # 2-minute timer instead, which also covers log rotation.
+    - boundary-logperm.timer
 
 # --- Datadog Agent -----------------------------------------------------------
 # Install only. The API key is fetched from SSM at boot by user-data and

@@ -11,6 +11,26 @@ variable "github_repo" {
   default     = ""
 }
 
+variable "github_repo_sub" {
+  description = <<-DESC
+    The `sub` claim GitHub actually puts in the OIDC token, WITHOUT the trailing
+    ':*'. It is NOT "owner/repo" - GitHub embeds immutable numeric ids:
+
+      repo:owner@40911856/repo@1358281041
+
+    A trust policy written as "repo:owner/repo:*" never matches and fails with
+    "Not authorized to perform sts:AssumeRoleWithWebIdentity" while looking
+    completely correct. Cost hours on 2026-09-23; see item 15 in notes/Issues.md.
+
+    Find yours by printing the claims from a throwaway workflow:
+      TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+        "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r .value)
+      echo "$TOKEN" | cut -d. -f2 | base64 -d | jq .sub
+  DESC
+  type        = string
+  default     = ""
+}
+
 data "tls_certificate" "github" {
   count = var.github_repo == "" ? 0 : 1
   url   = "https://token.actions.githubusercontent.com/.well-known/openid-configuration"
@@ -35,7 +55,11 @@ resource "aws_iam_role" "github_actions" {
       Action    = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
-        StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:*" }
+        # Uses github_repo_sub when set, because GitHub's real sub carries
+        # numeric ids and "repo:owner/repo:*" silently never matches.
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo_sub != "" ? var.github_repo_sub : var.github_repo}:*"
+        }
       }
     }]
   })

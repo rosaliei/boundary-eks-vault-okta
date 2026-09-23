@@ -2,7 +2,14 @@
 init_config:
 
 instances:
-  - url: http://127.0.0.1:9203/health?worker_info=1
+    # BASE of the ops listener, not a full path. The check appends both
+    # /health?worker_info=1 (for state) and /metrics (for the session gauge).
+    # It reads boundary_worker_proxy_websocket_active_connections from
+    # /metrics, NOT active_session_count from /health - that field is always 0
+    # on Boundary v1.0.1+ent. See the header of boundary_worker.py.
+    # The old `url:` key pointing straight at /health is gone; it is ignored by
+    # the current check and was only ever misleading.
+  - ops_url: http://127.0.0.1:9203
     min_collection_interval: 15
     # asg / worker_name tags are added as host tags in datadog.yaml at boot.
 

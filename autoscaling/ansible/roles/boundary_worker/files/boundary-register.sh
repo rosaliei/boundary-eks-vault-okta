@@ -19,6 +19,24 @@ fi
 WORKER_NAME="worker-${INSTANCE_ID}"
 log "registering $WORKER_NAME"
 
+# public_addr is what the worker ADVERTISES to clients. Without it the worker
+# announces 0.0.0.0:9202, which no client can dial - so a client can never be
+# routed to it directly and every session takes the multi-hop reverse-connection
+# path instead. That path is not instrumented: active_session_count stays 0
+# however much traffic flows (measured 2026-09-23, 1815 ProxyChain events
+# against a counter reading zero). Direct ingress is what makes the metric work.
+#
+# It MUST be resolved at boot: every replacement instance gets a new public IP,
+# and a stale value means clients dial an address that is no longer there.
+PUBLIC_IP=$(imds /latest/meta-data/public-ipv4 2>/dev/null || true)
+if [ -n "$PUBLIC_IP" ]; then
+  PUBLIC_ADDR_LINE="  public_addr = \"$PUBLIC_IP\""
+  log "advertising public_addr $PUBLIC_IP"
+else
+  PUBLIC_ADDR_LINE=""
+  log "no public IPv4 on this instance - worker will be egress-only"
+fi
+
 boundary_login boundary-worker-register registrar
 
 resp=$(boundary workers create controller-led \
@@ -43,16 +61,23 @@ listener "tcp" {
   purpose = "proxy"
 }
 
-# Local-only. /health?worker_info=1 is what the Datadog check and the
-# lifecycle script read active_session_count from.
+# Local-only. Serves BOTH /health?worker_info=1 (worker state) and /metrics
+# (the session gauge). The Datadog check and the lifecycle scripts read the
+# gauge from /metrics - active_session_count on /health is always 0 here.
+# tls_disable is REQUIRED: Boundary refuses to start an ops listener that has
+# neither a certificate nor TLS explicitly disabled ("tls not disabled for
+# listener ... but no certificate file supplied", exit 3). Both readers use
+# plain http:// on the loopback, so disabling is correct here, not a shortcut.
 listener "tcp" {
-  address = "127.0.0.1:9203"
-  purpose = "ops"
+  address     = "127.0.0.1:9203"
+  purpose     = "ops"
+  tls_disable = true
 }
 
 worker {
   controller_generated_activation_token = "${activation}"
   auth_storage_path = "/opt/boundary/worker"
+${PUBLIC_ADDR_LINE}
 
   # type=eks is what the eks-api-* targets and the Vault credential store
   # filter on. Every worker in the pool carries it.

@@ -2,7 +2,15 @@ locals {
   vpc_id          = data.terraform_remote_state.base.outputs.vpc_id
   vpc_cidr        = data.terraform_remote_state.base.outputs.vpc_cidr_block
   private_subnets = data.terraform_remote_state.base.outputs.private_subnet_ids
-  account_id      = data.aws_caller_identity.current.account_id
+
+  # Workers run in PUBLIC subnets so clients reach them directly on 9202.
+  # A worker that only dials out is reached over the multi-hop reverse
+  # connection, and that path is not instrumented: active_session_count stays 0
+  # however much traffic flows (measured 2026-09-23 — 1815 ProxyChain events
+  # against a counter reading zero), so the autoscaling metric never moves.
+  # Direct ingress is what makes the signal exist at all. See notes/Issues.md.
+  public_subnets = data.terraform_remote_state.base.outputs.public_subnet_ids
+  account_id     = data.aws_caller_identity.current.account_id
 }
 
 # =============================================================================
@@ -79,6 +87,18 @@ resource "aws_security_group" "worker" {
     cidr_blocks = [local.vpc_cidr]
   }
 
+  # Direct client ingress. Without this the client cannot reach the worker and
+  # every session falls back to the uninstrumented multi-hop path, which is
+  # what kept active_session_count at 0. Keep this list tight - it is the only
+  # thing between the internet and the worker's proxy port.
+  ingress {
+    description = "Boundary clients connecting directly to this worker"
+    from_port   = 9202
+    to_port     = 9202
+    protocol    = "tcp"
+    cidr_blocks = var.client_cidrs
+  }
+
   egress {
     description = "HCP Boundary, HCP/in-VPC Vault, EKS API, Datadog, SSM, STS"
     from_port   = 0
@@ -104,7 +124,16 @@ resource "aws_launch_template" "worker" {
   instance_type = var.instance_type
 
   iam_instance_profile { name = aws_iam_instance_profile.worker.name }
-  vpc_security_group_ids = [aws_security_group.worker.id]
+
+  # The public subnets do not auto-assign addresses, so the template forces it.
+  # No public IP means no dialable public_addr, which means no direct ingress
+  # and therefore no session metric. Replaces vpc_security_group_ids, which
+  # cannot be combined with a network_interfaces block.
+  network_interfaces {
+    associate_public_ip_address = true
+    security_groups             = [aws_security_group.worker.id]
+    delete_on_termination       = true
+  }
 
   metadata_options {
     http_tokens                 = "required"
@@ -152,7 +181,7 @@ resource "aws_autoscaling_group" "worker" {
   min_size            = var.asg_min_size
   max_size            = var.asg_max_size
   desired_capacity    = var.asg_min_size
-  vpc_zone_identifier = local.private_subnets
+  vpc_zone_identifier = local.public_subnets
 
   health_check_type         = "EC2"
   health_check_grace_period = 180

@@ -1,6 +1,6 @@
 {
   "title": "Boundary workers - ${asg}",
-  "description": "Sessions, pool size, worker health, scaling monitors, Vault, event log. Managed by autoscaling/datadog.",
+  "description": "Sessions, worker health, scaling monitors and the event log. Managed by autoscaling/datadog.",
   "layout_type": "ordered",
   "reflow_type": "fixed",
   "widgets": [
@@ -29,20 +29,11 @@
     },
     {
       "definition": {
-        "type": "query_value", "title": "Workers in service", "precision": 0, "autoscale": false,
-        "requests": [{ "response_format": "scalar", "queries": [
-          { "data_source": "metrics", "name": "q", "query": "avg:aws.autoscaling.group_in_service_instances{autoscalinggroupname:${asg}}", "aggregator": "last" }
-        ], "formulas": [{ "formula": "q" }] }]
-      },
-      "layout": { "x": 6, "y": 0, "width": 3, "height": 2 }
-    },
-    {
-      "definition": {
         "type": "manage_status", "title": "Scaling monitors", "display_format": "countsAndList", "color_preference": "text",
         "hide_zero_counts": true, "show_last_triggered": true, "sort": "status,asc", "summary_type": "monitors",
         "query": "tag:(service:boundary-worker)"
       },
-      "layout": { "x": 9, "y": 0, "width": 3, "height": 2 }
+      "layout": { "x": 6, "y": 0, "width": 6, "height": 2 }
     },
     {
       "definition": {
@@ -55,17 +46,7 @@
           { "value": "y = ${in_threshold}", "display_type": "warning dashed", "label": "scale in" }
         ]
       },
-      "layout": { "x": 0, "y": 2, "width": 6, "height": 3 }
-    },
-    {
-      "definition": {
-        "type": "timeseries", "title": "Pool size: desired vs in service", "show_legend": true, "legend_layout": "auto",
-        "requests": [{ "response_format": "timeseries", "display_type": "line", "queries": [
-          { "data_source": "metrics", "name": "desired", "query": "avg:aws.autoscaling.group_desired_capacity{autoscalinggroupname:${asg}}" },
-          { "data_source": "metrics", "name": "inservice", "query": "avg:aws.autoscaling.group_in_service_instances{autoscalinggroupname:${asg}}" }
-        ], "formulas": [{ "formula": "desired", "alias": "desired" }, { "formula": "inservice", "alias": "in service" }] }]
-      },
-      "layout": { "x": 6, "y": 2, "width": 6, "height": 3 }
+      "layout": { "x": 0, "y": 2, "width": 12, "height": 3 }
     },
     {
       "definition": {
@@ -95,20 +76,11 @@
     },
     {
       "definition": {
-        "type": "timeseries", "title": "Vault (HCP metrics streaming or agent): requests/s", "show_legend": false,
-        "requests": [{ "response_format": "timeseries", "display_type": "line", "queries": [
-          { "data_source": "metrics", "name": "q", "query": "sum:vault.core.handle_request.count{*}.as_rate()" }
-        ], "formulas": [{ "formula": "q" }] }]
-      },
-      "layout": { "x": 0, "y": 7, "width": 4, "height": 2 }
-    },
-    {
-      "definition": {
         "type": "log_stream", "title": "Boundary worker events", "query": "source:boundary",
         "columns": ["host", "service", "@data.event_type"], "show_date_column": true, "show_message_column": true,
         "message_display": "inline", "sort": { "column": "time", "order": "desc" }
       },
-      "layout": { "x": 4, "y": 7, "width": 8, "height": 3 }
+      "layout": { "x": 0, "y": 7, "width": 12, "height": 3 }
     }
   ]
 }
