@@ -123,11 +123,6 @@ could:
 6. [Autoscaling](https://app.excalidraw.com/s/9hD7S5FgGWN/1Vd6jSI6hbf) — the
    worker pool: session metric, monitors, the scale-out and scale-in paths
 
-<p align="center">
-  <a href="https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P"><img src="docs/boards/issues-board.jpg" alt="Board 5: every failure found before autoscaling, grouped by component — HCP Boundary control plane, roles and targets, worker EC2, Vault and the internal NLB — each card giving what was seen, the cause, and the fix" width="520"></a><br>
-  <sub><b>Board 5</b> — what broke, why, and the fix. <a href="https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P">Open full size</a></sub>
-</p>
-
 Scene rule: do the layer by hand once, watch it work, then apply the
 automation and confirm it produces the same objects. If the two differ, the
 drawing is the truth and the code has drifted.
