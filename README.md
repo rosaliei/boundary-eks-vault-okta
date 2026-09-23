@@ -144,9 +144,6 @@ layer references names created by the one before it.
 
 - **Vault runs in dev mode** — in-memory, auto-unsealed, plaintext HTTP over
   the internal NLB. First production task: HCP Vault Dedicated or in-cluster Raft.
-- **Port 9202 depends on an IP allowlist** — deliberate, but if your address
-  rotates, sessions silently fall back to the uninstrumented path and the
-  metric reads zero. It looks like a regression; it is a network change.
 
 ## Roadmap
 
