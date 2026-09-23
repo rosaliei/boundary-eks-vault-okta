@@ -142,31 +142,3 @@ Plus the Datadog agent, which runs the custom check every 15 seconds.
 `/etc/boundary/env` is written by user-data at boot and holds the addresses and
 names every script reads. It is the one file to look at first when a worker
 misbehaves.
-
----
-
-## Sizing and cost
-
-`t3.small`, not `t3.micro`. The worker itself is small, but it shares the box
-with the Datadog agent, and 1 GiB is not enough for both — the kernel kills
-Boundary, systemd restarts it every five seconds, and the burst credits run out.
-
-At roughly $0.03/hour per worker, a pool of six costs about $0.18/hour. The NAT
-gateway and the EKS control plane cost more than the workers do.
-
----
-
-## Where things live
-
-```
-autoscaling/
-├── README.md                   this file
-├── 01-Build-By-Hand.md         build it by hand
-├── 02-Build-With-Terraform.md  build it with Terraform + Actions
-├── packer/                     bakes the worker AMI
-├── ansible/                    what goes into the AMI
-├── asg/                        launch template, ASG, IAM, security group
-├── brokers/                    the two Boundary accounts + Vault roles
-├── datadog/                    monitors, webhooks, dashboard
-└── scripts/                    scale-to-workers.sh, the load generator
-```
