@@ -53,22 +53,15 @@ Constants used below:
 > have to chase. One auth method, three accounts on it: `admin`,
 > `worker-registrar`, `worker-deregistrar`.
 >
-> **Recovery if two stray auth methods already exist** (as found live on
-> 2026-09-17: `ampw_ARewCYhH63` "worker-registrar", `ampw_DYtMf796Nf`
-> "worker-deregistrar"): recreate the accounts on `ampw_WNbi76VghW` per this
-> section, re-point the two Vault KV secrets at it (A2 step 4 with
-> `auth_method_id=ampw_WNbi76VghW`), log in once as each broker to prove the
-> logins work, then empty the stray methods of accounts and delete them:
->
-> ```bash
-> export BOUNDARY_ADDR=https://95390bdc-e040-47df-8638-7c996c0f98f7.boundary.hashicorp.cloud
-> boundary auth-methods list -scope-id global -format json | jq -r '.items[] | "\(.id)\t\(.name)"'
-> boundary accounts list -scope-id global -format json | jq -r '.items[] | "\(.id)\t\(.auth_method_id)\t\(.login_name)"'
-> # for each account still on the stray methods:
-> boundary accounts delete -id acct_xxxx
-> boundary auth-methods delete -id ampw_ARewCYhH63
-> boundary auth-methods delete -id ampw_DYtMf796Nf
-> ```
+> **Recovery if two stray auth methods already exist** (found live 2026-09-17:
+> `ampw_ARewCYhH63` "worker-registrar", `ampw_DYtMf796Nf` "worker-deregistrar"):
+> rebuild the accounts on `ampw_WNbi76VghW` per this section, re-point both
+> Vault KV secrets (A2 step 4 with `auth_method_id=ampw_WNbi76VghW`), prove
+> both logins, then empty and delete the strays — `boundary auth-methods list
+> -scope-id global` and `boundary accounts list -scope-id global` to find them,
+> `boundary accounts delete -id acct_…` for each, then
+> `boundary auth-methods delete -id ampw_…`. Full story: 2026-09-17 #1 in
+> [`notes/Issues.md`](../notes/Issues.md).
 
 Log in to the Boundary admin UI as `admin` (password auth). Stay in the
 **Global** scope for all of this — workers are global resources.
@@ -98,14 +91,14 @@ Workers only; Targets/Sessions are empty. That is the least-privilege you will
 draw.
 
 > **Step 4 is the one that gets skipped, and a correct role hides it.** A role
-> grants to a *user*, and a user is reached through the *account* that was used
-> to log in. If the account exists on the right auth method but was never added
-> to the user, login succeeds and every action is refused — registration dies at
-> boot with `403 PermissionDenied` on `create on controller-led-type worker`
-> while the role reads as perfectly configured. `403` not `401` is the tell:
-> a valid token proves authentication, never authorization.
->
-> Verify the whole chain, not just the role:
+> grants to a *user*, reached through the *account* used to log in. If the
+> account exists on the right auth method but was never added to the user,
+> login succeeds and every action is refused — registration dies at boot with
+> `403 PermissionDenied` on `create on controller-led-type worker` while the
+> role reads as perfectly configured. `403` not `401` is the tell: a valid
+> token proves authentication, never authorization. Verify the whole chain,
+> and that the account's `auth_method_id` equals the one stored in the Vault
+> KV secret the worker reads:
 >
 > ```bash
 > boundary roles read -id <role-id>                    # note its principal user id
@@ -113,10 +106,7 @@ draw.
 > boundary accounts read -id <account-id>              # auth_method_id == the one in Vault KV
 > ```
 >
-> The account's `auth_method_id` must equal the `auth_method_id` stored in the
-> Vault KV secret the worker reads. Two accounts with the same login name on two
-> different methods is exactly how this goes wrong. Hit on 2026-09-22 — see
-> items 1 and 9 in [`notes/Issues.md`](../notes/Issues.md).
+> Hit on 2026-09-22 — items 1 and 9 in [`notes/Issues.md`](../notes/Issues.md).
 
 ### A2. Vault CLI: AWS auth + two roles + two secrets
 
@@ -253,54 +243,47 @@ Put the `ami-…` into `/boundary-worker/ami_id` (B1).
 User-data does only three things: writes `/etc/boundary/env`, writes the Datadog
 API key into `datadog.yaml`, starts the units. Read it once; it is 30 lines.
 
-> **Workers go in a PUBLIC subnet with a public IP — this is load-bearing, not
-> convenience.** A worker that only dials out is reached over the multi-hop
-> reverse connection, and Boundary does not instrument that path: the session
-> metric reads 0 forever no matter how much traffic flows, so nothing can ever
-> scale. Four things have to line up, and missing any one silently returns you
-> to a flat-zero metric:
->
-> | | |
-> |---|---|
-> | Subnet | a **public** one, with `AssociatePublicIpAddress` forced in the launch template |
-> | `public_addr` | resolved from IMDS at boot by `boundary-register.sh` — it changes per instance, so it can never be hardcoded |
-> | Security group | 9202 open to the **client's** IP, not just the VPC |
-> | Target | an `ingress_worker_filter`, not only an egress one |
->
-> The trade is real: the workers become internet-reachable on 9202 and the SG is
-> the only thing in front of that port. See items 14-15 in [`notes/Issues.md`](../notes/Issues.md).
+> **Workers go in a PUBLIC subnet with a public IP — load-bearing, not
+> convenience.** A dial-out-only worker is reached over the multi-hop reverse
+> connection, which Boundary does not instrument: the session metric reads 0
+> forever, so nothing can ever scale. Four things must line up, and missing any
+> one silently returns you to a flat-zero metric — a **public** subnet with
+> `AssociatePublicIpAddress` forced in the launch template; `public_addr`
+> resolved from IMDS at boot by `boundary-register.sh` (per-instance, never
+> hardcoded); the security group open to the **client's** IP on 9202, not just
+> the VPC; and an `ingress_worker_filter` on every target, not only an egress
+> one:
 >
 > ```bash
 > boundary targets update tcp -id <target-id> \
 >   -ingress-worker-filter '"eks" in "/tags/type"'
 > ```
-
-> **Size it `t3.small`, and set CPU credits to *unlimited*.** The Boundary
-> worker is a light TCP proxy, but it is not alone on the box: it holds ~470 MiB
-> RSS plus two `boundary-plugin` children, and the Datadog agent adds `agent`,
-> `trace-loader`, `agent-data-plane` and `system-probe` on top. On a `t3.micro`
-> (1 GiB) the kernel OOM-kills `boundary`, systemd restarts it every 5 s, that
-> loop holds ~52% CPU against a 10% baseline, the burst credits reach zero, and
-> the **SSM agent is starved** — so the instance also stops answering Session
-> Manager and Run Command, exactly when you need it. Measured 2026-09-23; see
-> items 10-11 in [`notes/Issues.md`](../notes/Issues.md).
 >
-> When an instance stops answering SSM, do not keep sending it commands:
+> The trade is real: the workers become internet-reachable on 9202 and the SG
+> is the only thing in front of that port. Items 14 and 18 in
+> [`notes/Issues.md`](../notes/Issues.md).
+
+> **Size it `t3.small`, and set CPU credits to *unlimited*.** The worker
+> (~470 MiB RSS plus two `boundary-plugin` children) shares the box with the
+> Datadog agent (four more processes). On a `t3.micro` (1 GiB) the kernel
+> OOM-kills `boundary`, systemd restarts it every 5 s, burst credits burn to
+> zero, and the starved SSM agent stops answering Session Manager — exactly
+> when you need it. Measured 2026-09-23; items 10-11 in
+> [`notes/Issues.md`](../notes/Issues.md). Debug a mute instance from outside
+> rather than sending it more SSM commands:
 >
 > ```bash
 > aws ec2 get-console-output --instance-id <id> --latest   # needs no agent
 > ```
 
-> **Render it first — this is the single easiest step to get wrong.**
-> `user-data.sh.tpl` is a Terraform `templatefile()` template. Pasting it
-> unrendered leaves literal `${boundary_addr}` in the file, and because the
-> script runs under `set -euo pipefail` with an **unquoted** heredoc, bash
-> expands `${boundary_addr}` as a *shell* variable, finds it unset, and kills
-> user-data **on line 10** — before the SSM read, before `datadog.yaml`, before
-> any `systemctl start`. Nothing reports the failure: the ASG calls the instance
-> healthy, the Datadog agent runs (it is baked into the AMI), and the only
-> symptom is `connection refused` on `:9203` several layers away. See the
-> 2026-09-22 entry in [`notes/Issues.md`](../notes/Issues.md).
+> **Render it first — the single easiest step to get wrong.** `user-data.sh.tpl`
+> is a Terraform `templatefile()` template. Pasted raw, the literal `${…}` meet
+> `set -euo pipefail` and an **unquoted** heredoc: bash expands
+> `${boundary_addr}` as an unset *shell* variable and user-data dies **on line
+> 10** — silently. The ASG calls the instance healthy, the Datadog agent runs
+> (it is baked into the AMI), and the only symptom is `connection refused` on
+> `:9203` several layers away. 2026-09-22 #1-2 in
+> [`notes/Issues.md`](../notes/Issues.md).
 
 Render with the eight real values, then verify nothing is left:
 
@@ -576,19 +559,19 @@ Notifications** → state *Alert* → Run test. GitHub → **Actions** → a
 
 ### D4. Dashboard
 
-**Dashboards → New Dashboard → New Timeboard** and add, in this order:
+**Dashboards → New Dashboard → New Timeboard** with four things on it:
 
-1. Query Value — `sum:boundary.worker.active_sessions{asg:boundary-workers}` — *Active sessions*
-2. Query Value — `avg:boundary.worker.active_sessions{asg:boundary-workers}` — *Avg per worker*; conditional format red > 10, yellow < 3
-3. Query Value — `avg:aws.autoscaling.group_in_service_instances{autoscalinggroupname:boundary-workers}` — *Workers*
-4. Monitor Summary — query `tag:(service:boundary-worker)`
-5. Timeseries — sessions by `worker_name`; add **Markers** `y = 10` (error) and `y = 3` (warning)
-6. Timeseries — `aws.autoscaling.group_desired_capacity` and `…group_in_service_instances`
-7. Check Status — check `boundary.worker.health`, group by host
-8. Timeseries (Logs) — `source:boundary @data.event_type:session*`, count, bars
-9. Log Stream — `source:boundary`
+1. `boundary.worker.active_sessions` — total (query value) and **avg per worker**
+   (query value, conditional formats red > 10 / yellow < 3); add **markers**
+   `y = 10` (error) and `y = 3` (warning) to the per-worker timeseries
+2. `aws.autoscaling.group_in_service_instances` and `…group_desired_capacity` — *Workers*
+3. Monitor Summary — `tag:(service:boundary-worker)`; plus a Check Status tile
+   for `boundary.worker.health` grouped by host
+4. Log Stream — `source:boundary`
 
-That is the whole board. Add Vault/GitHub widgets later if you want them.
+The exact widget definitions are
+[`datadog/dashboard.json.tpl`](datadog/dashboard.json.tpl) — the Terraform
+path manages this board for you.
 
 ---
 

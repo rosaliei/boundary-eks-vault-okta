@@ -139,19 +139,17 @@ done
 
 > **Pass both filters in the same command, then read the target back.**
 > `targets update` **replaces** unspecified fields — setting ingress alone
-> silently clears egress, which means "any worker" and puts sessions back on the
-> uninstrumented path. The response still prints both; only a fresh read shows
-> the truth:
+> silently clears egress ("any worker" → uninstrumented path), and the response
+> still prints both; only a fresh read shows the truth:
 >
 > ```bash
 > boundary targets read -id $T -format json \
 >   | jq '{ingress:.item.ingress_worker_filter, egress:.item.egress_worker_filter}'
 > ```
 >
-> On 2026-09-23 two of three tiers were still filtering on an abandoned
-> `k8s_vault` tag that no worker carries — they could select zero workers and
-> every session on them failed. Nobody noticed because only the viewer tier was
-> ever tested. See findings 2 and 17 in [../notes/Issues.md](../notes/Issues.md).
+> On 2026-09-23 two of three tiers still filtered on an abandoned `k8s_vault`
+> tag no worker carries — zero workers selectable, every session failing.
+> Findings 2 and 17 in [../notes/Issues.md](../notes/Issues.md).
 
 > **Retire the bootstrap worker before you finish.** The single hand-built
 > worker carries the same `eks` tag, but advertises `0.0.0.0:9202` from a
@@ -178,13 +176,12 @@ done
 | `DATADOG_API_KEY`, `DATADOG_APP_KEY` | Datadog → Organization Settings |
 | `GH_DISPATCH_TOKEN` | fine-grained PAT, this repo only, *Contents: read and write* |
 
-> **The OIDC trust policy needs GitHub's numeric IDs, not the readable repo
-> path.** The `sub` claim looks like
-> `repo:owner@40911856/repo@1358281041:ref:refs/heads/main`. A policy written as
-> `repo:owner/repo:*` never matches, and fails with
+> **The OIDC trust policy needs GitHub's numeric IDs, not the repo path** — the
+> `sub` claim looks like
+> `repo:owner@40911856/repo@1358281041:ref:refs/heads/main`, so a policy written
+> as `repo:owner/repo:*` never matches and OIDC fails with
 > `Not authorized to perform sts:AssumeRoleWithWebIdentity` while looking
-> entirely correct. Find your real values with a one-off workflow that prints
-> the claims — see item 15 in [notes/Issues.md](../notes/Issues.md).
+> entirely correct. Item 15 in [notes/Issues.md](../notes/Issues.md).
 
 ---
 

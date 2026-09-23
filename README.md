@@ -49,7 +49,6 @@ measured on the live build.
 | **Zero standing credentials** | no kubeconfig on any laptop; every session mints a 15-minute token bound to the caller's RBAC tier |
 | **Private stays private** | the EKS API is never exposed — a Boundary worker inside the VPC is the only path in |
 | **The access layer scales itself** | worker pool grows **1 → 6** on live session count, zero human steps |
-| **~$0.31/hour** | the full stack in `ap-southeast-1` — over half of it the EKS control plane |
 
 ## How a session works
 
@@ -104,8 +103,29 @@ could draw it from memory, and only then was automated.** Every diagram is
 mine, drawn in Excalidraw as I went. The code is the *output* of that
 understanding, not a substitute for it.
 
-What broke along the way — on the
-[failure board](https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P) and in
+The five drawings below are my heart work — sketched by hand while each layer
+went up, not generated and not copied. Each one is the map I used to force the
+details into my head, and it shows more of how I learn than any bullet list
+could:
+
+1. [VPC & subnets](https://app.excalidraw.com/s/9hD7S5FgGWN/73UzMQca6Am) —
+   one VPC, 3 AZs, public + private subnets, NAT, the subnet tags EKS and the
+   NLB discover
+2. [EKS](https://app.excalidraw.com/s/9hD7S5FgGWN/2XoNL6sXrLz) — private
+   endpoint, access-entries auth, node group, the RBAC tiers
+3. [Boundary ↔ Okta identity](https://app.excalidraw.com/s/9hD7S5FgGWN/7rGrKHxR5PL) —
+   Okta groups claim → OIDC auth method → managed groups → roles → grants
+4. [Boundary → Vault → EKS RBAC](https://app.excalidraw.com/s/9hD7S5FgGWN/2didKmVk95t) —
+   the whole runtime path: worker in the VPC, credential brokering, one target
+   per tier
+5. [Issues — what broke and why](https://app.excalidraw.com/s/9hD7S5FgGWN/9x6Q0ZNzt0P) —
+   the failures from the real build, each with *seen / cause / fix*
+
+Scene rule: do the layer by hand once, watch it work, then apply the
+automation and confirm it produces the same objects. If the two differ, the
+drawing is the truth and the code has drifted.
+
+What broke along the way — the written log
 [notes/Issues.md](notes/Issues.md): the 24-hour token cap on EKS, a
 privilege-escalation path in an unscoped TokenRequest grant, six attempts at
 one Okta claim, a session counter stuck at zero through 1,815 live proxy
