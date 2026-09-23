@@ -183,18 +183,7 @@ Everything above works with a **single** worker, and that worker is a
 bottleneck and a single point of failure. The last layer replaces it with a
 pool that sizes itself to demand.
 
-```
-sessions ──► worker reports open connections
-                      │
-                      ▼
-               Datadog Agent ──► Datadog monitor
-                                       │ fires above 10 / below 3
-                                       ▼
-                              GitHub Actions workflow
-                                       │ assumes an AWS role by OIDC
-                                       ▼
-                           Auto Scaling group, 1 to 6 workers
-```
+![Scaling loop: workers report open sessions to Datadog, monitors fire above 10 or below 3 average sessions per worker, a GitHub Actions workflow assumes an AWS role by OIDC and moves the ASG desired capacity by one, and the pool re-registers itself](docs/scaling-loop.svg)
 
 Three decisions shape it:
 
@@ -264,71 +253,16 @@ Known-weak by design in this build, and what changes for production:
 - **Vault dev mode** — in-memory storage (a pod restart wipes every mount, role
   and policy), auto-unsealed, root token `root`, and plaintext HTTP across the
   VPC via the internal NLB.
-- **`viewer` can read every Secret in `demo-app`.** Confirmed live. In a
-  namespace with real workloads that is database passwords and TLS keys readable
-  by the most restricted tier. Drop `secrets` from the viewer Role.
-- **The pooled workers accept inbound 9202** from a short list of client IPs.
-  Deliberate — Boundary only instruments sessions that reach a worker directly,
-  so without it there is no metric and nothing scales. The security group is the
-  only thing in front of that port. Reasoning in
+- **Worker port 9202 is open to a few allowed IPs, on purpose.** Autoscaling
+  counts sessions that connect straight to a worker. If clients cannot reach a
+  worker directly, that count stays at zero and nothing scales. The security
+  group is the only thing guarding that port. Reasoning in
   [autoscaling/README.md](autoscaling/README.md).
-- **That IP allowlist is load-bearing and fragile.** When your address rotates,
-  sessions silently fall back to the uninstrumented path and the metric returns
-  to zero — which looks exactly like a regression rather than a network change.
-- **Boundary holds a periodic Vault token** that renews indefinitely, making
-  Boundary a trusted party. That is the trade for removing the port-forward.
-  Revoke by accessor if needed.
-- **`vault-sa-token.txt`** is a long-lived ServiceAccount JWT written to disk by
-  the README's original flow. Gitignored; delete it and prefer in-cluster Vault,
-  which reads its own projected token and needs no such file.
-- **A global role grants `target list` to every authenticated user** on this
-  shared cluster. Cosmetic (connect is separately gated) but it means target
-  names are visible org-wide.
+- **The allowed-IP list fails silently.** If your IP changes, sessions still
+  work — they just take another route — but the count drops to zero. It looks
+  like the autoscaling broke, when in fact only your address changed.
 
 ## Roadmap
-
-Ordered by what would hurt most if left undone.
-
-### Would bite first
-
-**Vault out of dev mode.** In-memory storage means a single pod restart erases
-every auth method, role, policy and secret — and every worker then fails to
-register, with an error that points at Boundary rather than Vault. Either HCP
-Vault Dedicated over an HVN peering, or in-cluster Raft on a PVC with
-auto-unseal. This is the largest single risk in the build.
-
-**Remote Terraform state.** `autoscaling/asg/` has no state at all — its
-resources were built by hand — so `terraform apply` there would try to create
-duplicates and collide on names. S3 + DynamoDB locking, then `terraform import`
-the existing objects. Until then `infra.yml` cannot apply anything and the ASG
-stays hand-managed.
-
-**A stable client address.** Replace the `/32` allowlist with something that
-does not move: a VPN egress IP, an office range, or a bastion. Today the
-allowlist is what keeps sessions on the instrumented path, and it expires
-without warning.
-
-### Removes a sharp edge
-
-**Two workers minimum, across AZs.** `min_size = 1` means one instance refresh,
-one Spot reclaim or one bad AMI takes all access away. Two is the smallest
-number that survives losing one.
-
-**Alarm on lifecycle-hook timeouts.** A worker that fails to deregister sits in
-`Terminating:Wait` for the full 300s and then dies anyway, leaving a stale
-record. Nothing notices. A CloudWatch alarm on hook timeouts would catch a
-broken cleanup script the first time rather than the tenth.
-
-**A dedicated rotation principal.** `rotate-broker-creds.yml` wants the Boundary
-*admin* password in CI to rotate two far less privileged accounts. A purpose-made
-account with only `set-password` on those two would be the right blast radius.
-
-**Scale on byte rate as well as connections.** The current gauge counts *open*
-connections, which suits long-lived sessions (SSH, port-forward, watches). A
-burst of short `kubectl` commands moves bytes without moving the gauge, so that
-workload would never scale out.
-
-### Worth having
 
 - **Session recording (BSR)** on the targets — full keystroke audit, which is
   usually the thing that makes a PAM story complete for auditors.
@@ -344,46 +278,6 @@ workload would never scale out.
   `initial_lifecycle_hook`, which AWS honours only at ASG creation — later edits
   do nothing and `plan` shows no drift. `aws_autoscaling_lifecycle_hook` is the
   resource that actually manages updates.
-
----
-
-# Repository layout
-
-```
-aws/                          AWS: VPC, EKS, node group, Boundary worker EC2
-  boundary-worker.tf          worker instance, IAM, security group, cloud-init
-k8s/rbac.yaml                 namespace, ServiceAccounts, Roles, RoleBindings
-vault/                        Kubernetes secrets engine + one role per tier
-  MANUAL-SETUP.md             dev-mode install, in-cluster variant
-boundary/                     scope, managed groups, roles, host catalog, targets
-  credentials.tf              Vault credential store, libraries, per-tier targets
-  MANUAL-SETUP.md             the same objects built by hand in the UI
-01-Build-By-Hand.md           build the platform by hand
-02-Build-With-Terraform.md    the same in Terraform
-03-Integrations.md            every integration, edge by edge
-notes/Issues.md               the full failure log: causes, fixes, troubleshooting
-docs/                         diagrams (SVG, rendered inline above)
-autoscaling/                  worker pool on an ASG: self-register / self-deregister,
-                              scaled by Datadog -> GitHub Actions
-  README.md                   architecture + high-level diagram
-  01-Build-By-Hand.md         build it by hand
-  02-Build-With-Terraform.md  Terraform + GitHub Actions
-  brokers/                    Boundary broker users + Vault AWS-auth roles + KV
-  ansible/ packer/            the worker AMI and its three scripts
-  asg/ datadog/               ASG + lifecycle hook + GitHub OIDC role; monitors
-.github/workflows/            scale.yml, ami-build.yml, infra.yml, rotate-broker-creds.yml
-```
-
-Three independent Terraform roots, three separate states, applied in order:
-`aws/` → `vault/` (optional; the CLI path is documented) →
-`boundary/`. They do not share state; values pass by hand or by variable.
-
-`boundary/` takes an existing OIDC auth method **ID** as a variable rather than
-managing the auth method — Boundary never returns the Okta client secret, so
-Terraform cannot own that resource without the secret being pasted in.
-
-**Not in git, by design:** `*.tfstate` (holds the Vault broker token and cluster
-CA in cleartext), `*.tfvars`, `vault-sa-token.txt`, `ca.crt`, kubeconfigs.
 
 ---
 
